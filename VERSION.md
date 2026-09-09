@@ -6,6 +6,14 @@ stays in sync with `app/build.gradle.kts`.
 
 ---
 
+## 0.5 — versionCode 6 — 2026-09-09
+
+- **New-user sign-in**: broaden the detection of "a display name is required to
+  create an account" so `AuthViewModel` reveals the display-name field and
+  retries `start` with the original phone number, instead of just showing the
+  error. Matches the slug and, as a fallback, any "display name" text in the
+  error detail / field errors (the exact shape is undocumented).
+
 ## 0.4 — versionCode 5 — 2026-09-09
 
 - **Fix crash on sign out**: `AuthRepository.signOut()` called

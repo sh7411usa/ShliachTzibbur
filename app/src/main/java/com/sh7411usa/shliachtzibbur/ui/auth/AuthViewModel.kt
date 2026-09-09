@@ -130,11 +130,6 @@ class AuthViewModel(
         }
     }
 
-    private fun needsDisplayName(error: ApiException): Boolean =
-        error.type == ErrorType.INVALID_DISPLAY_NAME ||
-            error.type == ErrorType.RESERVED_DISPLAY_NAME ||
-            (error.type == ErrorType.VALIDATION_FAILED &&
-                error.fieldErrors.keys.any { it.contains("displayName", ignoreCase = true) || it.contains("name", ignoreCase = true) })
 
     fun resend() {
         val phone = _state.value.phoneE164 ?: return
@@ -220,4 +215,25 @@ class AuthViewModel(
     companion object {
         const val ERR_INVALID_PHONE = "auth_error_invalid_phone"
     }
+}
+
+/**
+ * True when the server rejected `start` only because a new registration needs a
+ * display name (e.g. "A display name is required to create an account"). The
+ * exact error shape isn't documented, so this matches the known slugs and, as a
+ * fallback, any "display name" text in the type / detail / field errors.
+ */
+internal fun needsDisplayName(error: ApiException): Boolean {
+    if (error.type == ErrorType.INVALID_DISPLAY_NAME || error.type == ErrorType.RESERVED_DISPLAY_NAME) {
+        return true
+    }
+    val haystack = buildString {
+        append(error.type).append(' ')
+        append(error.detail.orEmpty()).append(' ')
+        error.fieldErrors.forEach { (k, v) -> append(k).append(' ').append(v).append(' ') }
+    }.lowercase()
+    return "display name" in haystack ||
+        "displayname" in haystack ||
+        "display_name" in haystack ||
+        ("name" in haystack && ("required" in haystack || "missing" in haystack))
 }
