@@ -10,6 +10,13 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
+    <!-- Login: prefill the phone number from the SIM, and auto-read the SMS code. -->
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <uses-permission android:name="android.permission.READ_PHONE_NUMBERS" />
+    <uses-permission android:name="android.permission.RECEIVE_SMS" />
+    <!-- Contacts screen. -->
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
+
     <!-- The app is fully usable without a touchscreen (D-pad / TV / feature phone). -->
     <uses-feature
         android:name="android.hardware.touchscreen"

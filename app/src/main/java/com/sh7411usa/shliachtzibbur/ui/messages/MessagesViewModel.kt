@@ -18,9 +18,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 data class MessagesUiState(
@@ -58,9 +60,20 @@ class MessagesViewModel(
         AppForegroundState.visibleGroupId = groupId
         refreshLatest()
         loadOlder()
+        viewModelScope.launch { messageRepository.sweepStuckOutbox(groupId) }
         // Live updates while this screen is open (in addition to any sync service).
         viewModelScope.launch {
             runCatching { syncManager.runWebSocketSession() }
+        }
+        // Confirm/expire queued sends while the screen is open.
+        viewModelScope.launch {
+            while (isActive) {
+                delay(4_000)
+                if (conversation.value.any { it is ConversationItem.Pending }) {
+                    messageRepository.refreshLatest(groupId)
+                    messageRepository.sweepStuckOutbox(groupId)
+                }
+            }
         }
     }
 
@@ -98,11 +111,16 @@ class MessagesViewModel(
             _state.update {
                 it.copy(sending = false, error = (result as? ApiResult.Failure)?.error)
             }
+            messageRepository.refreshLatest(groupId)
         }
     }
 
     fun retry(clientMessageId: String) {
         viewModelScope.launch { messageRepository.retry(clientMessageId) }
+    }
+
+    fun deleteFailed(clientMessageId: String) {
+        viewModelScope.launch { messageRepository.deleteOutbox(clientMessageId) }
     }
 
     fun markReadUpTo(seq: Long) {

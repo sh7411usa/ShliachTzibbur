@@ -23,6 +23,8 @@ data class AppSettings(
     /** Whether the persistent WebSocket sync service may run. */
     val syncServiceEnabled: Boolean = false,
     val mutedGroupIds: Set<String> = emptySet(),
+    /** Last phone number used to sign in, prefilled on the login screen. Survives sign-out. */
+    val lastPhoneE164: String = "",
 )
 
 class SettingsStore(private val context: Context) {
@@ -33,6 +35,7 @@ class SettingsStore(private val context: Context) {
         val NOTIFICATIONS = booleanPreferencesKey("notifications_enabled")
         val SYNC_SERVICE = booleanPreferencesKey("sync_service_enabled")
         val MUTED = stringSetPreferencesKey("muted_group_ids")
+        val LAST_PHONE = stringPreferencesKey("last_phone_e164")
     }
 
     val settings: Flow<AppSettings> = context.settingsDataStore.data.map { prefs ->
@@ -42,6 +45,7 @@ class SettingsStore(private val context: Context) {
             notificationsEnabled = prefs[Keys.NOTIFICATIONS] ?: true,
             syncServiceEnabled = prefs[Keys.SYNC_SERVICE] ?: false,
             mutedGroupIds = prefs[Keys.MUTED].orEmpty(),
+            lastPhoneE164 = prefs[Keys.LAST_PHONE].orEmpty(),
         )
     }
 
@@ -56,6 +60,9 @@ class SettingsStore(private val context: Context) {
 
     suspend fun setSyncServiceEnabled(enabled: Boolean) =
         context.settingsDataStore.edit { it[Keys.SYNC_SERVICE] = enabled }
+
+    suspend fun setLastPhoneE164(phone: String) =
+        context.settingsDataStore.edit { it[Keys.LAST_PHONE] = phone }
 
     suspend fun setGroupMuted(groupId: String, muted: Boolean) {
         context.settingsDataStore.edit { prefs ->

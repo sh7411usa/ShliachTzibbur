@@ -12,7 +12,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -47,6 +49,8 @@ import com.sh7411usa.shliachtzibbur.ui.common.toUserMessage
 fun GroupsScreen(
     onOpenGroup: (String) -> Unit,
     onCreateGroup: () -> Unit,
+    onOpenContacts: () -> Unit,
+    onOpenSettings: () -> Unit,
     viewModel: GroupsViewModel = viewModel(factory = AppViewModelFactory.Factory),
 ) {
     val groups by viewModel.groups.collectAsStateWithLifecycle()
@@ -62,6 +66,12 @@ fun GroupsScreen(
                     }
                     IconButton(onClick = onCreateGroup) {
                         Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.groups_new))
+                    }
+                    IconButton(onClick = onOpenContacts) {
+                        Icon(Icons.Filled.Person, contentDescription = stringResource(R.string.nav_contacts))
+                    }
+                    IconButton(onClick = onOpenSettings) {
+                        Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.nav_settings))
                     }
                 },
             )

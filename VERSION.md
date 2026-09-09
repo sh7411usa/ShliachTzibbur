@@ -6,6 +6,35 @@ stays in sync with `app/build.gradle.kts`.
 
 ---
 
+## 0.2 — versionCode 3 — 2026-09-09
+
+Second pass — login flow, contacts, groups UI, and a messaging fix.
+
+- **Messaging fix**: sends no longer hang on "Sending…". After a 2xx the client
+  re-fetches (`refreshLatest`) to reconcile the message by `clientMessageId`
+  instead of trusting the POST reply; a 20s timeout marks a stuck send FAILED; a
+  confirm-sweep runs while the conversation is open and on open (catches sends
+  orphaned by process death). A FAILED bubble now offers **Retry** / **Delete**.
+- **Login flow**:
+  - Phone number is prefilled from the last-used number, else a single SIM's
+    number; with 2+ SIMs the user picks (with an "other" option). Missing phone
+    permission is requested inline, then re-detected.
+  - The nickname field is gone from the first screen; if the server needs a
+    display name for a new registration, the screen reveals a name field and
+    retries with the same number.
+  - The SMS code is auto-detected via a `RECEIVE_SMS` listener (no Play
+    Services), with a spinner and a "enter manually" escape hatch.
+- **Contacts screen**: lists device contacts flagged by Tzibbur registration
+  (`/v1/contacts/check`, using Android's pre-computed E.164). A registered
+  contact expands to show their groups and an "add to a group" picker (existing
+  groups they're not in, plus "new group"). Unregistered contacts get an
+  editable invite blurb shared through the system chooser.
+- **Groups screen**: bottom tab bar removed; Contacts and Settings are now
+  top-bar icons alongside refresh and add. Settings is a pushed screen with a
+  back arrow.
+- **Permissions added** (all runtime, graceful when denied): `READ_PHONE_STATE`,
+  `READ_PHONE_NUMBERS`, `RECEIVE_SMS`, `READ_CONTACTS`.
+
 ## 0.1 — versionCode 2 — 2026-09-09
 
 First implementation of the Shliach Tzibbur client on top of the Tzibbur API.

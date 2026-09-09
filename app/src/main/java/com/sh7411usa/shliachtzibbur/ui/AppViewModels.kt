@@ -10,6 +10,7 @@ import com.sh7411usa.shliachtzibbur.ShliachTzibburApp
 import com.sh7411usa.shliachtzibbur.di.AppContainer
 import com.sh7411usa.shliachtzibbur.ui.appsettings.AppSettingsViewModel
 import com.sh7411usa.shliachtzibbur.ui.auth.AuthViewModel
+import com.sh7411usa.shliachtzibbur.ui.contacts.ContactsViewModel
 import com.sh7411usa.shliachtzibbur.ui.groups.CreateGroupViewModel
 import com.sh7411usa.shliachtzibbur.ui.groups.GroupsViewModel
 import com.sh7411usa.shliachtzibbur.ui.groupsettings.GroupSettingsViewModel
@@ -33,9 +34,29 @@ object NavArg {
  */
 object AppViewModelFactory {
     val Factory: ViewModelProvider.Factory = viewModelFactory {
-        initializer { AuthViewModel(container.authRepository, container.profileRepository) }
+        initializer {
+            AuthViewModel(
+                authRepository = container.authRepository,
+                profileRepository = container.profileRepository,
+                settingsStore = container.settingsStore,
+                smsCodeReceiver = container.smsCodeReceiver,
+            )
+        }
         initializer { GroupsViewModel(container.groupRepository) }
-        initializer { CreateGroupViewModel(container.groupRepository) }
+        initializer {
+            CreateGroupViewModel(
+                savedStateHandle = createSavedStateHandle(),
+                groupRepository = container.groupRepository,
+                memberRepository = container.memberRepository,
+            )
+        }
+        initializer {
+            ContactsViewModel(
+                contactsRepository = container.contactsRepository,
+                groupRepository = container.groupRepository,
+                memberRepository = container.memberRepository,
+            )
+        }
         initializer {
             MessagesViewModel(
                 savedStateHandle = createSavedStateHandle(),

@@ -18,6 +18,7 @@ import com.sh7411usa.shliachtzibbur.data.local.entity.toDomain
 import com.sh7411usa.shliachtzibbur.data.local.entity.toEntity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Message history and sending.
@@ -33,6 +34,8 @@ class MessageRepository(
     private val messageDao: MessageDao,
     private val outboxDao: OutboxDao,
     private val groupDao: GroupDao,
+    /** A send that is neither confirmed nor rejected within this window is marked FAILED. */
+    private val sendTimeoutMs: Long = 20_000L,
 ) {
     private val pageSize = 50
 
@@ -100,16 +103,46 @@ class MessageRepository(
     }
 
     suspend fun retry(clientMessageId: String): ApiResult<Unit> {
-        val entry = outboxDao.all().firstOrNull { it.clientMessageId == clientMessageId }
-            ?: return ApiResult.Success(Unit)
+        val entry = outboxDao.find(clientMessageId) ?: return ApiResult.Success(Unit)
         outboxDao.updateState(clientMessageId, OutboxState.SENDING.name, null)
         return deliver(entry.groupId, clientMessageId, entry.text)
     }
 
+    /** Remove a queued/failed outgoing message the user chose to discard. */
+    suspend fun deleteOutbox(clientMessageId: String) {
+        outboxDao.delete(clientMessageId)
+    }
+
     suspend fun flushOutbox(): ApiResult<Unit> = apiCatching {
         outboxDao.all()
-            .filter { it.state != OutboxState.SENDING.name }
+            .filter { it.state != OutboxState.FAILED.name }
             .forEach { deliver(it.groupId, it.clientMessageId, it.text) }
+    }
+
+    /**
+     * Reconcile queued rows for a group:
+     *  - rows whose message is already stored -> deleted
+     *  - rows older than [sendTimeoutMs] and still unconfirmed -> FAILED
+     *  - PENDING rows (server accepted but we never saw the message) -> retried
+     */
+    suspend fun sweepStuckOutbox(groupId: String) {
+        val now = System.currentTimeMillis()
+        for (row in outboxDao.forGroup(groupId)) {
+            if (messageDao.findByClientId(row.clientMessageId) != null) {
+                outboxDao.delete(row.clientMessageId)
+                continue
+            }
+            val age = now - row.createdAtMillis
+            when {
+                row.state == OutboxState.FAILED.name -> Unit
+                age > sendTimeoutMs -> {
+                    outboxDao.updateState(row.clientMessageId, OutboxState.FAILED.name, ERROR_TIMEOUT)
+                    Log.w("Outbox row ${row.clientMessageId} timed out after ${age}ms")
+                }
+                row.state == OutboxState.PENDING.name ->
+                    deliver(row.groupId, row.clientMessageId, row.text)
+            }
+        }
     }
 
     private suspend fun deliver(
@@ -117,31 +150,49 @@ class MessageRepository(
         clientMessageId: String,
         text: String,
     ): ApiResult<Unit> {
-        val result = apiCatching { api.sendMessage(groupId, clientMessageId, text) }
-        return when (result) {
-            is ApiResult.Success -> {
-                result.value?.let { persist(groupId, listOf(it)) }
-                // If the reply was not a full message object, the outbox row is
-                // cleared when the message arrives via history/WebSocket.
-                if (result.value != null) outboxDao.delete(clientMessageId)
-                else outboxDao.updateState(clientMessageId, OutboxState.PENDING.name, null)
-                ApiResult.Success(Unit)
-            }
+        Log.d("Sending message group=$groupId cmid=$clientMessageId len=${text.length}")
+        val outcome = withTimeoutOrNull(sendTimeoutMs) {
+            when (val result = apiCatching { api.sendMessage(groupId, clientMessageId, text) }) {
+                is ApiResult.Success -> {
+                    result.value?.let { persist(groupId, listOf(it)) }
+                    // Pull the server's copy so the message (carrying our
+                    // clientMessageId) lands and persist() clears the outbox row.
+                    refreshLatest(groupId)
+                    if (outboxDao.find(clientMessageId) == null ||
+                        messageDao.findByClientId(clientMessageId) != null
+                    ) {
+                        outboxDao.delete(clientMessageId)
+                        Log.d("Message $clientMessageId confirmed")
+                        ApiResult.Success(Unit)
+                    } else {
+                        // Server returned 2xx but no visible message yet; the
+                        // confirm-sweep will retry/confirm.
+                        outboxDao.updateState(clientMessageId, OutboxState.PENDING.name, null)
+                        Log.d("Message $clientMessageId accepted, awaiting confirmation")
+                        ApiResult.Success(Unit)
+                    }
+                }
 
-            is ApiResult.Failure -> {
-                if (result.error.type == ErrorType.CLIENT_MESSAGE_ID_REUSED) {
-                    // Already accepted on a previous attempt.
-                    outboxDao.delete(clientMessageId)
-                    ApiResult.Success(Unit)
-                } else {
-                    outboxDao.updateState(
-                        clientMessageId,
-                        OutboxState.FAILED.name,
-                        result.error.type,
-                    )
-                    result
+                is ApiResult.Failure -> {
+                    if (result.error.type == ErrorType.CLIENT_MESSAGE_ID_REUSED) {
+                        outboxDao.delete(clientMessageId)
+                        ApiResult.Success(Unit)
+                    } else {
+                        val reason = buildString {
+                            append(result.error.type)
+                            if (result.error.status != 0) append(" (${result.error.status})")
+                        }
+                        outboxDao.updateState(clientMessageId, OutboxState.FAILED.name, reason)
+                        Log.w("Message $clientMessageId failed: $reason")
+                        result
+                    }
                 }
             }
+        }
+        return outcome ?: run {
+            outboxDao.updateState(clientMessageId, OutboxState.FAILED.name, ERROR_TIMEOUT)
+            Log.w("Message $clientMessageId send timed out")
+            ApiResult.Failure(ApiException(ERROR_TIMEOUT, status = 0, detail = "Message send timed out"))
         }
     }
 
@@ -174,5 +225,9 @@ class MessageRepository(
     suspend fun ackDelivery(groupId: String, seq: Long): ApiResult<Unit> = apiCatching {
         api.ack(groupId, seq)
         groupDao.advanceDeliveredSeq(groupId, seq)
+    }
+
+    companion object {
+        const val ERROR_TIMEOUT = "send_timed_out"
     }
 }

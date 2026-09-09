@@ -1,6 +1,34 @@
 <resources>
     <string name="app_name">Shliach Tzibbur</string>
 
+    <string name="action_allow">Permitir</string>
+    <string name="auth_phone_e164_label">Número de teléfono (con código de país)</string>
+    <string name="auth_choose_number">¿Qué número?</string>
+    <string name="auth_other_number">Otro número</string>
+    <string name="phone_permission_rationale">Permite el acceso al teléfono y completaremos tu número automáticamente.</string>
+    <string name="auth_nickname_needed">Parece que eres nuevo aquí: elige un nombre que verán los demás.</string>
+    <string name="auth_nickname_label">Tu nombre</string>
+    <string name="auth_waiting_for_sms">Esperando el código…</string>
+    <string name="auth_enter_manually">Introducir el código manualmente</string>
+    <string name="messages_retry">Reintentar</string>
+    <string name="messages_delete_message">Eliminar</string>
+    <string name="messages_too_small_generic">Este grupo aún no tiene suficientes miembros para publicar.</string>
+    <string name="messages_send_timed_out">El mensaje ha caducado.</string>
+    <string name="messages_send_failed">No enviado: toca para ver opciones.</string>
+    <string name="nav_contacts">Contactos</string>
+    <string name="contacts_title">Contactos</string>
+    <string name="contacts_empty">No se encontraron contactos con un número utilizable.</string>
+    <string name="contacts_permission_rationale">Permite el acceso a tus contactos para ver quién ya está en Tzibbur.</string>
+    <string name="contacts_on_tzibbur">En Tzibbur</string>
+    <string name="contacts_in_groups">En estos grupos</string>
+    <string name="contacts_not_in_any_group">Aún no está en ninguno de tus grupos.</string>
+    <string name="contacts_add_to_group">Añadir a un grupo</string>
+    <string name="contacts_new_group">Nuevo grupo…</string>
+    <string name="contacts_invite">Invitar</string>
+    <string name="contacts_invite_title">Invitar a Tzibbur</string>
+    <string name="contacts_invite_send">Enviar</string>
+    <string name="invite_blurb">Únete a mí en Tzibbur, una app sencilla para mensajes de grupo. Crea una cuenta en https://tzibbur.me</string>
+
     <string name="action_ok">Aceptar</string>
     <string name="action_cancel">Cancelar</string>
     <string name="action_save">Guardar</string>
@@ -73,7 +101,6 @@
     <string name="messages_too_small">Este grupo necesita al menos %1$d miembros antes de poder publicar.</string>
     <string name="messages_cannot_post">Solo los administradores pueden publicar en este grupo.</string>
     <string name="messages_system_readonly">Este es un hilo del sistema de solo lectura.</string>
-    <string name="messages_send_failed">No enviado. Toca para reintentar.</string>
     <string name="messages_sending">Enviando…</string>
     <string name="messages_char_count">%1$d / %2$d</string>
 

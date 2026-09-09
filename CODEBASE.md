@@ -55,6 +55,10 @@ com.sh7411usa.shliachtzibbur
 │   │                        server does real validation)
 │   │   Timestamps           RFC 3339 <-> epoch / localized formatting (java.time via
 │   │                        core-library desugaring)
+│   │   SimNumbers           best-effort device MSISDN discovery via SubscriptionManager;
+│   │                        returns Prefill / ChooseSim / NeedsPermission / None
+│   │   SmsCodeReceiver      RECEIVE_SMS listener that suspends until a code-shaped SMS
+│   │                        arrives (used to auto-fill the verification code)
 │   │
 │   └── net/
 │       NetJson              shared kotlinx.serialization Json (lenient, tolerant)
@@ -88,7 +92,7 @@ com.sh7411usa.shliachtzibbur
 │   │   SessionStore         token + userId + deviceId (Flow<Session?>)
 │   │   SettingsStore        AppSettings: themeMode, languageTag, notificationsEnabled,
 │   │                        syncServiceEnabled, mutedGroupIds (mute is local — the API
-│   │                        has no endpoint to persist it)
+│   │                        has no endpoint to persist it), lastPhoneE164 (login prefill)
 │   │
 │   └── repo/                Repositories: network + Room + DataStore, expose Flows,
 │                            return ApiResult (never throw)
@@ -100,9 +104,14 @@ com.sh7411usa.shliachtzibbur
 │       MessageRepository    conversation flow (messages + outbox, deduped by
 │                            clientMessageId), history paging (beforeSeq), durable
 │                            send via the outbox with reconciliation, local read-seq,
-│                            `ackDelivery` (store-then-ack)
+│                            `ackDelivery` (store-then-ack). Sends are bounded by a
+│                            20s timeout; deliver() re-fetches (refreshLatest) to
+│                            reconcile by clientMessageId; sweepStuckOutbox() expires
+│                            or retries orphaned rows; deleteOutbox() drops one
 │       MemberRepository     Room-backed member list, add by phone, role change, remove,
 │                            contacts/check
+│       ContactsRepository   device phone-book (READ_CONTACTS, uses Android's
+│                            NORMALIZED_NUMBER) crossed with /v1/contacts/check
 │       LegalRepository      privacy / terms, memory-cached
 │
 ├── sync/                    Delivery machinery (there is no notifications *screen*):
@@ -135,17 +144,27 @@ com.sh7411usa.shliachtzibbur
                              ConfirmDialog / SectionHeader / SegmentedChoice /
                              PrimaryButton / SecondaryButton, ApiException.toUserMessage
     navigation/              Routes, ShliachNavHost (auth graph vs main graph chosen by
-                             session; bottom-nav MainTabScaffold for Groups / Settings)
+                             session; no bottom nav — Groups is the single home,
+                             Contacts/Settings are top-bar destinations)
     auth/                    AuthViewModel (+ shared across the auth graph),
-                             AuthLandingScreen, PhoneEntryScreen, CodeVerifyScreen
+                             AuthLandingScreen, PhoneEntryScreen (SIM/last-number
+                             prefill, permission prompt, nickname-on-demand),
+                             CodeVerifyScreen (SMS auto-detect spinner + manual entry)
+    contacts/                ContactsViewModel + ContactsScreen — device contacts vs
+                             Tzibbur, expand a contact to see/add groups, invite the
+                             rest via the system share sheet
     groups/                  GroupsViewModel + GroupsScreen (Room-backed list,
-                             pull-to-refresh + toolbar refresh, unread/mute),
-                             CreateGroupViewModel + CreateGroupScreen (category chips),
+                             pull-to-refresh + toolbar refresh, unread/mute; top bar:
+                             refresh / add / contacts / settings),
+                             CreateGroupViewModel + CreateGroupScreen (category chips;
+                             optional memberPhone arg adds a contact after creation),
                              categoryLabel
     messages/                MessagesViewModel (group + conversation + self id; starts
-                             a WebSocket session while open; send/retry/loadOlder/
-                             markRead) + MessagesScreen (bubbles, system-thread style,
-                             input bar with post-permission gating)
+                             a WebSocket session while open; send/retry/deleteFailed/
+                             loadOlder/markRead; confirm-sweep loop for queued sends)
+                             + MessagesScreen (bubbles, system-thread style, input bar
+                             with post-permission gating, Retry/Delete menu on a
+                             failed bubble)
     groupsettings/           GroupSettingsViewModel + GroupSettingsScreen (name,
                              whoCanPost/whoCanAddMembers, mute, leave, delete),
                              MembersViewModel + MembersScreen (+ add-members dialog,

@@ -19,6 +19,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -178,6 +180,7 @@ fun MessagesScreen(
                                 text = item.outbox.text,
                                 failed = item.outbox.state == OutboxState.FAILED,
                                 onRetry = { viewModel.retry(item.outbox.clientMessageId) },
+                                onDelete = { viewModel.deleteFailed(item.outbox.clientMessageId) },
                             )
                         }
                     }
@@ -235,40 +238,69 @@ private fun MessageBubble(text: String, sender: String?, isSelf: Boolean, isSyst
 }
 
 @Composable
-private fun PendingBubble(text: String, failed: Boolean, onRetry: () -> Unit) {
+private fun PendingBubble(
+    text: String,
+    failed: Boolean,
+    onRetry: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    var menuOpen by remember { mutableStateOf(false) }
     Row(
         Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 3.dp)
-            .then(
-                if (failed) {
-                    Modifier
-                        .focusHighlight(makeFocusable = true)
-                        .clickable(onClick = onRetry)
-                } else {
-                    Modifier
-                },
-            ),
+            .padding(horizontal = 12.dp, vertical = 3.dp),
         horizontalArrangement = Arrangement.End,
     ) {
-        Column(
-            Modifier
-                .widthIn(max = 320.dp)
-                .background(
-                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
-                    RoundedCornerShape(14.dp),
+        Box {
+            Column(
+                Modifier
+                    .widthIn(max = 320.dp)
+                    .then(
+                        if (failed) {
+                            Modifier
+                                .focusHighlight(makeFocusable = true)
+                                .clickable { menuOpen = true }
+                        } else {
+                            Modifier
+                        },
+                    )
+                    .background(
+                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                        RoundedCornerShape(14.dp),
+                    )
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                horizontalAlignment = Alignment.End,
+            ) {
+                Text(text, style = MaterialTheme.typography.bodyLarge)
+                Text(
+                    stringResource(
+                        if (failed) R.string.messages_send_failed else R.string.messages_sending,
+                    ),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (failed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-            horizontalAlignment = Alignment.End,
-        ) {
-            Text(text, style = MaterialTheme.typography.bodyLarge)
-            Text(
-                stringResource(
-                    if (failed) R.string.messages_send_failed else R.string.messages_sending,
-                ),
-                style = MaterialTheme.typography.labelSmall,
-                color = if (failed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            }
+            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.messages_retry)) },
+                    onClick = {
+                        menuOpen = false
+                        onRetry()
+                    },
+                )
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            stringResource(R.string.messages_delete_message),
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    },
+                    onClick = {
+                        menuOpen = false
+                        onDelete()
+                    },
+                )
+            }
         }
     }
 }

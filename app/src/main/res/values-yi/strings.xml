@@ -6,6 +6,33 @@
 <resources>
     <string name="app_name">שליח ציבור</string>
 
+    <string name="action_allow">דערלויבן</string>
+    <string name="auth_phone_e164_label">טעלעפֿאָן־נומער (מיט לאַנד־קאָד)</string>
+    <string name="auth_choose_number">וועלכער נומער?</string>
+    <string name="auth_other_number">אַן אַנדער נומער</string>
+    <string name="phone_permission_rationale">דערלויב צוטריט צום טעלעפֿאָן און מיר וועלן אויספֿילן אײַער נומער אויטאָמאַטיש.</string>
+    <string name="auth_nickname_needed">עס זעט אויס אַז איר זײַט נײַ דאָ — קלײַבט אויס אַ נאָמען וואָס אַנדערע וועלן זען.</string>
+    <string name="auth_nickname_label">אײַער נאָמען</string>
+    <string name="auth_waiting_for_sms">וואַרט אויפֿן קאָד…</string>
+    <string name="auth_enter_manually">גיט אײַן דעם קאָד מאַנועל</string>
+    <string name="messages_retry">פּרוּוו נאָך אַ מאָל</string>
+    <string name="messages_delete_message">אויסמעקן</string>
+    <string name="messages_too_small_generic">די גרופּע האָט נאָך נישט גענוג מיטגלידער צו שרײַבן.</string>
+    <string name="messages_send_timed_out">די צײַט פֿאַרן שיקן די מעלדונג איז אויס.</string>
+    <string name="nav_contacts">קאָנטאַקטן</string>
+    <string name="contacts_title">קאָנטאַקטן</string>
+    <string name="contacts_empty">קיין קאָנטאַקטן מיט אַ ניצלעכן נומער זײַנען נישט געפֿונען געוואָרן.</string>
+    <string name="contacts_permission_rationale">דערלויב צוטריט צו אײַערע קאָנטאַקטן צו זען ווער איז שוין אויף Tzibbur.</string>
+    <string name="contacts_on_tzibbur">אויף Tzibbur</string>
+    <string name="contacts_in_groups">אין די גרופּעס</string>
+    <string name="contacts_not_in_any_group">נאָך נישט אין קיין איינער פֿון אײַערע גרופּעס.</string>
+    <string name="contacts_add_to_group">צוגעבן צו אַ גרופּע</string>
+    <string name="contacts_new_group">נײַע גרופּע…</string>
+    <string name="contacts_invite">פֿאַרבעטן</string>
+    <string name="contacts_invite_title">פֿאַרבעטן צו Tzibbur</string>
+    <string name="contacts_invite_send">שיקן</string>
+    <string name="invite_blurb">חבֿר זיך מיט מיר אויף Tzibbur — אַ פּשוטע אַפּ פֿאַר גרופּע־מעלדונגען. שאַפֿט אַ קאָנטע בײַ https://tzibbur.me</string>
+
     <string name="action_ok">גוט</string>
     <string name="action_cancel">אָפּברעכן</string>
     <string name="action_save">אויפֿהיטן</string>

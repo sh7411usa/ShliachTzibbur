@@ -15,6 +15,12 @@ interface OutboxDao {
     @Query("SELECT * FROM outbox ORDER BY createdAtMillis ASC")
     suspend fun all(): List<OutboxEntity>
 
+    @Query("SELECT * FROM outbox WHERE groupId = :groupId ORDER BY createdAtMillis ASC")
+    suspend fun forGroup(groupId: String): List<OutboxEntity>
+
+    @Query("SELECT * FROM outbox WHERE clientMessageId = :id LIMIT 1")
+    suspend fun find(id: String): OutboxEntity?
+
     @Upsert
     suspend fun upsert(entry: OutboxEntity)
 

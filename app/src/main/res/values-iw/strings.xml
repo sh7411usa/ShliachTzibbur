@@ -1,6 +1,33 @@
 <resources>
     <string name="app_name">שליח ציבור</string>
 
+    <string name="action_allow">אישור</string>
+    <string name="auth_phone_e164_label">מספר טלפון (עם קידומת מדינה)</string>
+    <string name="auth_choose_number">איזה מספר?</string>
+    <string name="auth_other_number">מספר אחר</string>
+    <string name="phone_permission_rationale">אשר גישה לטלפון ונמלא את המספר שלך אוטומטית.</string>
+    <string name="auth_nickname_needed">נראה שאתה חדש כאן — בחר שם שאחרים יראו.</string>
+    <string name="auth_nickname_label">השם שלך</string>
+    <string name="auth_waiting_for_sms">ממתין לקוד…</string>
+    <string name="auth_enter_manually">הזנת הקוד ידנית</string>
+    <string name="messages_retry">ניסיון חוזר</string>
+    <string name="messages_delete_message">מחיקה</string>
+    <string name="messages_too_small_generic">לקבוצה עדיין אין מספיק חברים כדי לפרסם.</string>
+    <string name="messages_send_timed_out">תם הזמן לשליחת ההודעה.</string>
+    <string name="nav_contacts">אנשי קשר</string>
+    <string name="contacts_title">אנשי קשר</string>
+    <string name="contacts_empty">לא נמצאו אנשי קשר עם מספר שמיש.</string>
+    <string name="contacts_permission_rationale">אשר גישה לאנשי הקשר שלך כדי לראות מי כבר נמצא ב-Tzibbur.</string>
+    <string name="contacts_on_tzibbur">ב-Tzibbur</string>
+    <string name="contacts_in_groups">בקבוצות האלה</string>
+    <string name="contacts_not_in_any_group">עדיין לא נמצא באף אחת מהקבוצות שלך.</string>
+    <string name="contacts_add_to_group">הוספה לקבוצה</string>
+    <string name="contacts_new_group">קבוצה חדשה…</string>
+    <string name="contacts_invite">הזמנה</string>
+    <string name="contacts_invite_title">הזמנה ל-Tzibbur</string>
+    <string name="contacts_invite_send">שליחה</string>
+    <string name="invite_blurb">הצטרף אליי ב-Tzibbur — אפליקציה פשוטה להודעות קבוצתיות. צור חשבון בכתובת https://tzibbur.me</string>
+
     <string name="action_ok">אישור</string>
     <string name="action_cancel">ביטול</string>
     <string name="action_save">שמירה</string>

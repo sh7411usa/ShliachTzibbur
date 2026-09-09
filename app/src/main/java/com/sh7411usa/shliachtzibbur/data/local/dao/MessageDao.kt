@@ -21,6 +21,9 @@ interface MessageDao {
     @Query("SELECT MAX(seq) FROM messages WHERE groupId = :groupId")
     suspend fun maxSeq(groupId: String): Long?
 
+    @Query("SELECT * FROM messages WHERE clientMessageId = :clientMessageId LIMIT 1")
+    suspend fun findByClientId(clientMessageId: String): MessageEntity?
+
     @Query("SELECT COUNT(*) FROM messages WHERE groupId = :groupId AND seq > :afterSeq")
     fun observeUnreadCount(groupId: String, afterSeq: Long): Flow<Int>
 

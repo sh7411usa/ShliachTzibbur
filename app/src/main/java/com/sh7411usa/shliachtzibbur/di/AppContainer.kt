@@ -6,10 +6,12 @@ import com.sh7411usa.shliachtzibbur.core.net.NetworkFactory
 import com.sh7411usa.shliachtzibbur.core.net.TokenProvider
 import com.sh7411usa.shliachtzibbur.core.net.TzibburApi
 import com.sh7411usa.shliachtzibbur.core.net.ws.TzibburWebSocket
+import com.sh7411usa.shliachtzibbur.core.util.SmsCodeReceiver
 import com.sh7411usa.shliachtzibbur.data.local.AppDatabase
 import com.sh7411usa.shliachtzibbur.data.prefs.SessionStore
 import com.sh7411usa.shliachtzibbur.data.prefs.SettingsStore
 import com.sh7411usa.shliachtzibbur.data.repo.AuthRepository
+import com.sh7411usa.shliachtzibbur.data.repo.ContactsRepository
 import com.sh7411usa.shliachtzibbur.data.repo.GroupRepository
 import com.sh7411usa.shliachtzibbur.data.repo.LegalRepository
 import com.sh7411usa.shliachtzibbur.data.repo.MemberRepository
@@ -70,6 +72,9 @@ class AppContainer(context: Context) {
     }
     val memberRepository by lazy { MemberRepository(api, database.memberDao()) }
     val legalRepository by lazy { LegalRepository(api) }
+    val contactsRepository by lazy { ContactsRepository(appContext, api) }
+
+    val smsCodeReceiver by lazy { SmsCodeReceiver(appContext) }
 
     val notificationHelper by lazy { NotificationHelper(appContext) }
     val syncController by lazy { SyncController(appContext) }

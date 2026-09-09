@@ -1,22 +1,9 @@
 package com.sh7411usa.shliachtzibbur.ui.navigation
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
@@ -29,7 +16,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.navigation.navigation
-import com.sh7411usa.shliachtzibbur.R
 import com.sh7411usa.shliachtzibbur.core.model.LegalKind
 import com.sh7411usa.shliachtzibbur.ui.AppViewModelFactory
 import com.sh7411usa.shliachtzibbur.ui.appsettings.AppSettingsScreen
@@ -37,6 +23,7 @@ import com.sh7411usa.shliachtzibbur.ui.auth.AuthLandingScreen
 import com.sh7411usa.shliachtzibbur.ui.auth.AuthViewModel
 import com.sh7411usa.shliachtzibbur.ui.auth.CodeVerifyScreen
 import com.sh7411usa.shliachtzibbur.ui.auth.PhoneEntryScreen
+import com.sh7411usa.shliachtzibbur.ui.contacts.ContactsScreen
 import com.sh7411usa.shliachtzibbur.ui.groups.CreateGroupScreen
 import com.sh7411usa.shliachtzibbur.ui.groups.GroupsScreen
 import com.sh7411usa.shliachtzibbur.ui.groupsettings.GroupSettingsScreen
@@ -97,7 +84,9 @@ private fun NavGraphBuilder.authGraph(navController: NavHostController) {
             PhoneEntryScreen(
                 state = state,
                 onBack = { navController.popBackStack() },
-                onSubmit = { cc, national, name, region -> vm.startSms(cc, national, name, region) },
+                onDetectPhone = vm::onPhoneDetection,
+                onChooseSim = vm::chooseSim,
+                onSubmit = vm::submitPhone,
             )
             LaunchedEffect(state.challenge) {
                 if (state.challenge != null) navController.navigate(Routes.AUTH_CODE)
@@ -109,6 +98,8 @@ private fun NavGraphBuilder.authGraph(navController: NavHostController) {
             CodeVerifyScreen(
                 state = state,
                 onBack = { navController.popBackStack() },
+                onStartAutoDetect = vm::startSmsAutoDetect,
+                onStopAutoDetect = vm::stopSmsAutoDetect,
                 onVerify = vm::verify,
                 onResend = vm::resend,
             )
@@ -126,23 +117,38 @@ private fun authViewModel(navController: NavHostController): AuthViewModel {
 private fun NavGraphBuilder.mainGraph(navController: NavHostController) {
     navigation(startDestination = Routes.GROUPS, route = Routes.MAIN_GRAPH) {
         composable(Routes.GROUPS) {
-            MainTabScaffold(navController, Routes.GROUPS) {
-                GroupsScreen(
-                    onOpenGroup = { id -> navController.navigate(Routes.messages(id)) },
-                    onCreateGroup = { navController.navigate(Routes.CREATE_GROUP) },
-                )
-            }
+            GroupsScreen(
+                onOpenGroup = { id -> navController.navigate(Routes.messages(id)) },
+                onCreateGroup = { navController.navigate(Routes.createGroup()) },
+                onOpenContacts = { navController.navigate(Routes.CONTACTS) },
+                onOpenSettings = { navController.navigate(Routes.SETTINGS_HOME) },
+            )
+        }
+        composable(Routes.CONTACTS) {
+            ContactsScreen(
+                onBack = { navController.popBackStack() },
+                onOpenGroup = { id -> navController.navigate(Routes.messages(id)) },
+                onNewGroupWith = { phone -> navController.navigate(Routes.createGroup(phone)) },
+            )
         }
         composable(Routes.SETTINGS_HOME) {
-            MainTabScaffold(navController, Routes.SETTINGS_HOME) {
-                SettingsHomeScreen(
-                    onOpenAccount = { navController.navigate(Routes.USER_SETTINGS) },
-                    onOpenAppSettings = { navController.navigate(Routes.APP_SETTINGS) },
-                    onOpenLegal = { kind -> navController.navigate(Routes.legal(kind)) },
-                )
-            }
+            SettingsHomeScreen(
+                onBack = { navController.popBackStack() },
+                onOpenAccount = { navController.navigate(Routes.USER_SETTINGS) },
+                onOpenAppSettings = { navController.navigate(Routes.APP_SETTINGS) },
+                onOpenLegal = { kind -> navController.navigate(Routes.legal(kind)) },
+            )
         }
-        composable(Routes.CREATE_GROUP) {
+        composable(
+            route = Routes.CREATE_GROUP,
+            arguments = listOf(
+                navArgument(Routes.ARG_MEMBER_PHONE) {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+            ),
+        ) {
             CreateGroupScreen(
                 onBack = { navController.popBackStack() },
                 onCreated = { id ->
@@ -198,47 +204,5 @@ private fun NavGraphBuilder.mainGraph(navController: NavHostController) {
             val kind = if (kindArg == LegalKind.TERMS.slug) LegalKind.TERMS else LegalKind.PRIVACY
             LegalScreen(kind = kind, onBack = { navController.popBackStack() })
         }
-    }
-}
-
-@Composable
-private fun MainTabScaffold(
-    navController: NavHostController,
-    current: String,
-    content: @Composable () -> Unit,
-) {
-    Scaffold(
-        bottomBar = {
-            NavigationBar {
-                NavigationBarItem(
-                    selected = current == Routes.GROUPS,
-                    onClick = { if (current != Routes.GROUPS) navController.navigateTab(Routes.GROUPS) },
-                    icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = null) },
-                    label = { Text(stringResource(R.string.nav_groups)) },
-                )
-                NavigationBarItem(
-                    selected = current == Routes.SETTINGS_HOME,
-                    onClick = {
-                        if (current != Routes.SETTINGS_HOME) navController.navigateTab(Routes.SETTINGS_HOME)
-                    },
-                    icon = { Icon(Icons.Filled.Settings, contentDescription = null) },
-                    label = { Text(stringResource(R.string.nav_settings)) },
-                )
-            }
-        },
-    ) { padding ->
-        Box(
-            Modifier
-                .fillMaxSize()
-                .padding(padding),
-        ) { content() }
-    }
-}
-
-private fun NavHostController.navigateTab(route: String) {
-    navigate(route) {
-        popUpTo(Routes.MAIN_GRAPH) { saveState = true }
-        launchSingleTop = true
-        restoreState = true
     }
 }

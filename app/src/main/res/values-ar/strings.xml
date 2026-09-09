@@ -1,6 +1,33 @@
 <resources>
     <string name="app_name">شليح تسيبور</string>
 
+    <string name="action_allow">السماح</string>
+    <string name="auth_phone_e164_label">رقم الهاتف (مع رمز الدولة)</string>
+    <string name="auth_choose_number">أي رقم؟</string>
+    <string name="auth_other_number">رقم آخر</string>
+    <string name="phone_permission_rationale">اسمح بالوصول إلى الهاتف وسنملأ رقمك تلقائيًا.</string>
+    <string name="auth_nickname_needed">يبدو أنك جديد هنا — اختر اسمًا سيراه الآخرون.</string>
+    <string name="auth_nickname_label">اسمك</string>
+    <string name="auth_waiting_for_sms">في انتظار الرمز…</string>
+    <string name="auth_enter_manually">إدخال الرمز يدويًا</string>
+    <string name="messages_retry">إعادة المحاولة</string>
+    <string name="messages_delete_message">حذف</string>
+    <string name="messages_too_small_generic">لا تملك هذه المجموعة أعضاءً كافين للنشر بعد.</string>
+    <string name="messages_send_timed_out">انتهت مهلة إرسال الرسالة.</string>
+    <string name="nav_contacts">جهات الاتصال</string>
+    <string name="contacts_title">جهات الاتصال</string>
+    <string name="contacts_empty">لم يتم العثور على جهات اتصال برقم قابل للاستخدام.</string>
+    <string name="contacts_permission_rationale">اسمح بالوصول إلى جهات اتصالك لمعرفة من هو موجود بالفعل على Tzibbur.</string>
+    <string name="contacts_on_tzibbur">على Tzibbur</string>
+    <string name="contacts_in_groups">في هذه المجموعات</string>
+    <string name="contacts_not_in_any_group">ليس في أي من مجموعاتك بعد.</string>
+    <string name="contacts_add_to_group">إضافة إلى مجموعة</string>
+    <string name="contacts_new_group">مجموعة جديدة…</string>
+    <string name="contacts_invite">دعوة</string>
+    <string name="contacts_invite_title">دعوة إلى Tzibbur</string>
+    <string name="contacts_invite_send">إرسال</string>
+    <string name="invite_blurb">انضم إليّ على Tzibbur — تطبيق بسيط للرسائل الجماعية. أنشئ حسابًا على https://tzibbur.me</string>
+
     <string name="action_ok">موافق</string>
     <string name="action_cancel">إلغاء</string>
     <string name="action_save">حفظ</string>

@@ -1,10 +1,13 @@
 package com.sh7411usa.shliachtzibbur.ui.groups
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sh7411usa.shliachtzibbur.core.result.ApiException
 import com.sh7411usa.shliachtzibbur.core.result.ApiResult
 import com.sh7411usa.shliachtzibbur.data.repo.GroupRepository
+import com.sh7411usa.shliachtzibbur.data.repo.MemberRepository
+import com.sh7411usa.shliachtzibbur.ui.navigation.Routes
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,7 +21,14 @@ data class CreateGroupUiState(
     val createdGroupId: String? = null,
 )
 
-class CreateGroupViewModel(private val groupRepository: GroupRepository) : ViewModel() {
+class CreateGroupViewModel(
+    savedStateHandle: SavedStateHandle,
+    private val groupRepository: GroupRepository,
+    private val memberRepository: MemberRepository,
+) : ViewModel() {
+
+    /** Optional contact to add to the group right after creation (from the contacts screen). */
+    private val memberPhone: String? = savedStateHandle[Routes.ARG_MEMBER_PHONE]
 
     private val _state = MutableStateFlow(CreateGroupUiState())
     val state: StateFlow<CreateGroupUiState> = _state.asStateFlow()
@@ -37,8 +47,11 @@ class CreateGroupViewModel(private val groupRepository: GroupRepository) : ViewM
         _state.update { it.copy(submitting = true, error = null) }
         viewModelScope.launch {
             when (val result = groupRepository.create(name.trim(), category)) {
-                is ApiResult.Success -> _state.update {
-                    it.copy(submitting = false, createdGroupId = result.value.id)
+                is ApiResult.Success -> {
+                    memberPhone?.takeIf { it.isNotBlank() }?.let { phone ->
+                        memberRepository.add(result.value.id, listOf(phone), null)
+                    }
+                    _state.update { it.copy(submitting = false, createdGroupId = result.value.id) }
                 }
 
                 is ApiResult.Failure -> _state.update {

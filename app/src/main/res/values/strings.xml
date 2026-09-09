@@ -18,6 +18,7 @@
     <string name="action_done">Done</string>
     <string name="action_sign_out">Sign out</string>
     <string name="action_more">More options</string>
+    <string name="action_allow">Allow</string>
 
     <!-- Generic states -->
     <string name="state_loading">Loading…</string>
@@ -51,6 +52,14 @@
     <string name="auth_error_invalid_phone">That phone number doesn\'t look right.</string>
     <string name="auth_error_invalid_name">Please choose a different name.</string>
     <string name="auth_error_sms_failed">We couldn\'t send an SMS to that number.</string>
+    <string name="auth_phone_e164_label">Phone number (with country code)</string>
+    <string name="auth_choose_number">Which number?</string>
+    <string name="auth_other_number">A different number</string>
+    <string name="phone_permission_rationale">Allow phone access and we\'ll fill in your number automatically.</string>
+    <string name="auth_nickname_needed">Looks like you\'re new here — choose a name others will see.</string>
+    <string name="auth_nickname_label">Your name</string>
+    <string name="auth_waiting_for_sms">Waiting for the code…</string>
+    <string name="auth_enter_manually">Enter code manually</string>
 
     <!-- Groups -->
     <string name="groups_title">Groups</string>
@@ -78,9 +87,13 @@
     <string name="messages_too_small">This group needs at least %1$d members before anyone can post.</string>
     <string name="messages_cannot_post">Only admins can post in this group.</string>
     <string name="messages_system_readonly">This is a read-only system thread.</string>
-    <string name="messages_send_failed">Not delivered. Tap to retry.</string>
+    <string name="messages_send_failed">Not delivered — tap for options.</string>
     <string name="messages_sending">Sending…</string>
     <string name="messages_char_count">%1$d / %2$d</string>
+    <string name="messages_retry">Retry</string>
+    <string name="messages_delete_message">Delete</string>
+    <string name="messages_too_small_generic">This group doesn\'t have enough members to post yet.</string>
+    <string name="messages_send_timed_out">Message timed out.</string>
 
     <!-- Group settings -->
     <string name="group_settings_title">Group settings</string>
@@ -158,4 +171,19 @@
     <!-- Navigation -->
     <string name="nav_groups">Groups</string>
     <string name="nav_settings">Settings</string>
+    <string name="nav_contacts">Contacts</string>
+
+    <!-- Contacts -->
+    <string name="contacts_title">Contacts</string>
+    <string name="contacts_empty">No contacts with a usable number were found.</string>
+    <string name="contacts_permission_rationale">Allow access to your contacts to see who is already on Tzibbur.</string>
+    <string name="contacts_on_tzibbur">On Tzibbur</string>
+    <string name="contacts_in_groups">In these groups</string>
+    <string name="contacts_not_in_any_group">Not in any of your groups yet.</string>
+    <string name="contacts_add_to_group">Add to a group</string>
+    <string name="contacts_new_group">New group…</string>
+    <string name="contacts_invite">Invite</string>
+    <string name="contacts_invite_title">Invite to Tzibbur</string>
+    <string name="contacts_invite_send">Send</string>
+    <string name="invite_blurb">Join me on Tzibbur — a simple app for group messages. Create an account at https://tzibbur.me</string>
 </resources>
