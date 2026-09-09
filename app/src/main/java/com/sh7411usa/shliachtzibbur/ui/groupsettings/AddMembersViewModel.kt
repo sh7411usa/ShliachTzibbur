@@ -6,7 +6,6 @@ import androidx.lifecycle.viewModelScope
 import com.sh7411usa.shliachtzibbur.core.model.AddMembersResult
 import com.sh7411usa.shliachtzibbur.core.result.ApiException
 import com.sh7411usa.shliachtzibbur.core.result.ApiResult
-import com.sh7411usa.shliachtzibbur.core.util.PhoneNumbers
 import com.sh7411usa.shliachtzibbur.data.repo.ContactsRepository
 import com.sh7411usa.shliachtzibbur.data.repo.DeviceContact
 import com.sh7411usa.shliachtzibbur.data.repo.MemberRepository
@@ -25,14 +24,17 @@ data class AddMembersUiState(
     /** E.164 numbers already in the group. */
     val existingMembers: Set<String> = emptySet(),
     val query: String = "",
-    /** E.164 numbers the user has selected (contacts + typed). */
+    /** Selected contacts, by E.164. */
     val selected: Set<String> = emptySet(),
-    /** Typed numbers not backed by a contact, shown as their own rows. */
-    val manualNumbers: List<String> = emptyList(),
+    /** Numbers the user typed in (shown as removable chips). The server parses
+     *  them with [region] when they aren't already E.164. */
+    val typed: List<String> = emptyList(),
     val working: Boolean = false,
     val result: AddMembersResult? = null,
     val error: ApiException? = null,
 ) {
+    val totalToAdd: Int get() = selected.size + typed.size
+
     val filteredContacts: List<DeviceContact>
         get() = if (query.isBlank()) contacts else contacts.filter {
             it.name.contains(query, ignoreCase = true) || it.e164.contains(query)
@@ -47,6 +49,8 @@ class AddMembersViewModel(
 
     val groupId: String = requireNotNull(savedStateHandle[NavArg.GROUP_ID])
 
+    private var region: String? = null
+
     private val _state = MutableStateFlow(
         AddMembersUiState(needsContactsPermission = !contactsRepository.hasPermission()),
     )
@@ -54,6 +58,10 @@ class AddMembersViewModel(
 
     init {
         load()
+    }
+
+    fun setRegion(r: String?) {
+        region = r?.takeIf { it.isNotBlank() }
     }
 
     fun onPermissionResult(granted: Boolean) {
@@ -87,27 +95,26 @@ class AddMembersViewModel(
         it.copy(selected = next)
     }
 
-    fun addManualNumber(raw: String) {
-        val e164 = PhoneNumbers.toE164("", if (raw.trim().startsWith("+")) raw.trim() else "+${raw.trim()}")
-        if (!PhoneNumbers.looksValid(e164)) {
+    fun addTypedNumber(raw: String) {
+        val cleaned = raw.filter { it.isDigit() || it == '+' }.let { s ->
+            if (s.startsWith("+")) "+" + s.drop(1).filter(Char::isDigit) else s.filter(Char::isDigit)
+        }
+        if (cleaned.count(Char::isDigit) < 4) {
             _state.update { it.copy(error = ApiException("auth_error_invalid_phone", 0, null)) }
             return
         }
-        _state.update {
-            it.copy(
-                manualNumbers = (it.manualNumbers + e164).distinct(),
-                selected = it.selected + e164,
-                error = null,
-            )
-        }
+        _state.update { it.copy(typed = (it.typed + cleaned).distinct(), error = null) }
     }
 
+    fun removeTypedNumber(number: String) =
+        _state.update { it.copy(typed = it.typed - number) }
+
     fun submit() {
-        val phones = _state.value.selected.toList()
+        val phones = _state.value.selected.toList() + _state.value.typed
         if (phones.isEmpty()) return
         _state.update { it.copy(working = true, error = null) }
         viewModelScope.launch {
-            when (val result = memberRepository.add(groupId, phones, null)) {
+            when (val result = memberRepository.add(groupId, phones, region)) {
                 is ApiResult.Success -> _state.update { it.copy(working = false, result = result.value) }
                 is ApiResult.Failure -> _state.update { it.copy(working = false, error = result.error) }
             }

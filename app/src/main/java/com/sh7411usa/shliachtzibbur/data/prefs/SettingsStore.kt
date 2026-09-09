@@ -20,8 +20,8 @@ data class AppSettings(
     /** BCP-47 tag, or empty string to follow the system language. */
     val languageTag: String = "",
     val notificationsEnabled: Boolean = true,
-    /** Whether the persistent WebSocket sync service may run. */
-    val syncServiceEnabled: Boolean = false,
+    /** Whether the persistent WebSocket sync service may run. On by default. */
+    val syncServiceEnabled: Boolean = true,
     val mutedGroupIds: Set<String> = emptySet(),
     /** Last phone number used to sign in, prefilled on the login screen. Survives sign-out. */
     val lastPhoneE164: String = "",
@@ -43,7 +43,7 @@ class SettingsStore(private val context: Context) {
             themeMode = ThemeMode.fromName(prefs[Keys.THEME]),
             languageTag = prefs[Keys.LANGUAGE].orEmpty(),
             notificationsEnabled = prefs[Keys.NOTIFICATIONS] ?: true,
-            syncServiceEnabled = prefs[Keys.SYNC_SERVICE] ?: false,
+            syncServiceEnabled = prefs[Keys.SYNC_SERVICE] ?: true,
             mutedGroupIds = prefs[Keys.MUTED].orEmpty(),
             lastPhoneE164 = prefs[Keys.LAST_PHONE].orEmpty(),
         )

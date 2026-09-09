@@ -8,12 +8,15 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -42,6 +45,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -312,7 +317,22 @@ private fun MessageInputBar(
     onSend: (String) -> Unit,
 ) {
     var text by remember { mutableStateOf("") }
-    Column(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface)) {
+
+    fun sendNow() {
+        val toSend = text.trim()
+        if (toSend.isNotEmpty() && enabled && !sending) {
+            onSend(toSend)
+            text = ""
+        }
+    }
+
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surface)
+            .navigationBarsPadding()
+            .imePadding(),
+    ) {
         if (blockedReason != null) {
             Text(
                 blockedReason,
@@ -333,21 +353,22 @@ private fun MessageInputBar(
                     placeholder = { Text(stringResource(R.string.messages_input_hint)) },
                     modifier = Modifier.weight(1f),
                     maxLines = 4,
-                    keyboardOptions = KeyboardOptions(),
+                    // A single-tap "Send" on the keyboard (incl. D-pad OK on a
+                    // T9 keypad) so the send button doesn't need to be focused.
+                    keyboardOptions = KeyboardOptions(
+                        capitalization = KeyboardCapitalization.Sentences,
+                        imeAction = ImeAction.Send,
+                    ),
+                    keyboardActions = KeyboardActions(onSend = { sendNow() }),
                     colors = TextFieldDefaults.colors(
                         focusedIndicatorColor = Color.Transparent,
                         unfocusedIndicatorColor = Color.Transparent,
                     ),
                 )
                 IconButton(
-                    onClick = {
-                        val toSend = text.trim()
-                        if (toSend.isNotEmpty()) {
-                            onSend(toSend)
-                            text = ""
-                        }
-                    },
+                    onClick = { sendNow() },
                     enabled = enabled && !sending && text.isNotBlank(),
+                    modifier = Modifier.focusHighlight(makeFocusable = true),
                 ) {
                     Icon(
                         Icons.AutoMirrored.Filled.Send,

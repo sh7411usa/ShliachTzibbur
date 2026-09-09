@@ -5,19 +5,24 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.InputChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -32,26 +37,33 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sh7411usa.shliachtzibbur.R
+import com.sh7411usa.shliachtzibbur.core.util.DeviceInfo
 import com.sh7411usa.shliachtzibbur.ui.AppViewModelFactory
 import com.sh7411usa.shliachtzibbur.ui.common.LoadingBox
 import com.sh7411usa.shliachtzibbur.ui.common.SecondaryButton
 import com.sh7411usa.shliachtzibbur.ui.common.focusHighlight
 import com.sh7411usa.shliachtzibbur.ui.common.toUserMessage
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun AddMembersScreen(
     onDone: () -> Unit,
     viewModel: AddMembersViewModel = viewModel(factory = AppViewModelFactory.Factory),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val context = LocalContext.current
     var manual by remember { mutableStateOf("") }
+
+    LaunchedEffect(Unit) { viewModel.setRegion(DeviceInfo.defaultRegion(context)) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
@@ -59,6 +71,13 @@ fun AddMembersScreen(
 
     LaunchedEffect(state.result) {
         if (state.result != null) onDone()
+    }
+
+    fun commitManual() {
+        if (manual.isNotBlank()) {
+            viewModel.addTypedNumber(manual)
+            manual = ""
+        }
     }
 
     Scaffold(
@@ -76,9 +95,9 @@ fun AddMembersScreen(
                 actions = {
                     TextButton(
                         onClick = viewModel::submit,
-                        enabled = state.selected.isNotEmpty() && !state.working,
+                        enabled = state.totalToAdd > 0 && !state.working,
                     ) {
-                        Text(stringResource(R.string.add_members_confirm, state.selected.size))
+                        Text(stringResource(R.string.add_members_confirm, state.totalToAdd))
                     }
                 },
             )
@@ -98,10 +117,34 @@ fun AddMembersScreen(
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
             )
+
+            if (state.typed.isNotEmpty()) {
+                FlowRow(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    state.typed.forEach { number ->
+                        InputChip(
+                            selected = true,
+                            onClick = { viewModel.removeTypedNumber(number) },
+                            label = { Text(number) },
+                            trailingIcon = {
+                                Icon(
+                                    Icons.Filled.Close,
+                                    contentDescription = stringResource(R.string.action_delete),
+                                )
+                            },
+                        )
+                    }
+                }
+            }
+
             Row(
                 Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
@@ -110,16 +153,19 @@ fun AddMembersScreen(
                     onValueChange = { manual = it.filter { c -> c.isDigit() || c == '+' } },
                     label = { Text(stringResource(R.string.add_members_type_number)) },
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Phone,
+                        imeAction = ImeAction.Done,
+                    ),
+                    keyboardActions = KeyboardActions(onDone = { commitManual() }),
                     modifier = Modifier.weight(1f),
                 )
-                IconButton(
-                    onClick = {
-                        viewModel.addManualNumber(manual)
-                        manual = ""
-                    },
-                    enabled = manual.count { it.isDigit() } >= 8,
+                TextButton(
+                    onClick = { commitManual() },
+                    enabled = manual.count { it.isDigit() } >= 4,
+                    modifier = Modifier.focusHighlight(makeFocusable = true),
                 ) {
-                    Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.action_add))
+                    Text(stringResource(R.string.action_add))
                 }
             }
 
@@ -148,16 +194,6 @@ fun AddMembersScreen(
                 }
 
                 else -> LazyColumn(Modifier.fillMaxSize()) {
-                    val manualRows = state.manualNumbers.map { it to it }
-                    items(manualRows, key = { "m-${it.first}" }) { (e164, _) ->
-                        PickerRow(
-                            title = e164,
-                            subtitle = null,
-                            checked = e164 in state.selected,
-                            enabled = true,
-                            onToggle = { viewModel.toggle(e164) },
-                        )
-                    }
                     items(state.filteredContacts, key = { it.e164 }) { contact ->
                         val isMember = contact.e164 in state.existingMembers
                         PickerRow(

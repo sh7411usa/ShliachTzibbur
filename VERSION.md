@@ -6,6 +6,23 @@ stays in sync with `app/build.gradle.kts`.
 
 ---
 
+## 0.7 — versionCode 8 — 2026-09-09
+
+D-pad / feature-phone fixes plus the background-sync default.
+
+- **Background sync service** now defaults to **on**.
+- **Legal screens** are D-pad scrollable: a new `Modifier.dpadScrollable` makes
+  the text container focusable and scrolls it on up/down/page keys.
+- **Add-member manual number**: a phone keypad (`KeyboardType.Phone` +
+  `ImeAction.Done`), the "+"/Add is a focusable labelled button and the Done key
+  also adds. Typed numbers now appear as **removable chips above the field**
+  instead of vanishing; national numbers are sent with the device region so they
+  no longer come back "unparseable".
+- **Message input on non-touch devices**: the input bar now pads for the
+  navigation bar / soft-key labels and the IME, and the message field carries an
+  `ImeAction.Send` (so the on-screen keyboard's send key works without focusing
+  the send button).
+
 ## 0.6 — versionCode 7 — 2026-09-09
 
 - **Unread counts**: computed locally as `lastMessageSeq - lastReadSeq` instead

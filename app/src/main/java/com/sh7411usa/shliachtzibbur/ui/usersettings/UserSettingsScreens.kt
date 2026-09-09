@@ -42,6 +42,7 @@ import com.sh7411usa.shliachtzibbur.core.util.Timestamps
 import com.sh7411usa.shliachtzibbur.ui.AppViewModelFactory
 import com.sh7411usa.shliachtzibbur.ui.common.ConfirmDialog
 import com.sh7411usa.shliachtzibbur.ui.common.LoadingBox
+import com.sh7411usa.shliachtzibbur.ui.common.dpadScrollable
 import com.sh7411usa.shliachtzibbur.ui.common.SectionHeader
 import com.sh7411usa.shliachtzibbur.ui.common.ThinDivider
 
@@ -280,14 +281,18 @@ fun LegalScreen(
     ) { padding ->
         when {
             state.legalLoading || state.legal == null -> LoadingBox(Modifier.padding(padding))
-            else -> com.sh7411usa.shliachtzibbur.ui.common.MarkdownText(
-                markdown = state.legal!!.text,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(16.dp)
-                    .verticalScroll(rememberScrollState()),
-            )
+            else -> {
+                val scroll = rememberScrollState()
+                com.sh7411usa.shliachtzibbur.ui.common.MarkdownText(
+                    markdown = state.legal!!.text,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                        .dpadScrollable(scroll)
+                        .verticalScroll(scroll)
+                        .padding(16.dp),
+                )
+            }
         }
     }
 }
