@@ -166,29 +166,36 @@ class AuthViewModel(
         _state.update { it.copy(autoDetecting = false) }
     }
 
-    fun verify(code: String) {
+    fun verify(code: String, nickname: String? = null) {
         val challenge = _state.value.challenge ?: return
         val phone = _state.value.phoneE164 ?: return
+        nickname?.takeIf { it.isNotBlank() }?.let { lastNickname = it }
         stopSmsAutoDetect()
         _state.update { it.copy(submitting = true, error = null) }
         viewModelScope.launch {
-            when (
-                val result = authRepository.verify(
-                    method = AuthMethod.Sms,
-                    challengeId = challenge.challengeId,
-                    code = code,
-                    phone = phone,
-                    displayName = lastNickname,
-                    region = lastRegion,
-                )
-            ) {
+            val result = authRepository.verify(
+                method = AuthMethod.Sms,
+                challengeId = challenge.challengeId,
+                code = code,
+                phone = phone,
+                displayName = lastNickname,
+                region = lastRegion,
+            )
+            when (result) {
                 is ApiResult.Success -> {
                     profileRepository.refresh()
                     _state.update { it.copy(submitting = false) }
                 }
 
-                is ApiResult.Failure -> _state.update {
-                    it.copy(submitting = false, error = result.error, detectedCode = null)
+                is ApiResult.Failure -> {
+                    // New registration: the server needs a display name. Reveal
+                    // the field on the code screen and let the user retry the
+                    // same code with a name.
+                    if (needsDisplayName(result.error) && lastNickname == null) {
+                        _state.update { it.copy(submitting = false, needsNickname = true, error = null) }
+                    } else {
+                        _state.update { it.copy(submitting = false, error = result.error, detectedCode = null) }
+                    }
                 }
             }
         }

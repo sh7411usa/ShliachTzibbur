@@ -76,6 +76,14 @@ class MessagesViewModel(
                 }
             }
         }
+        // Everything shown while this screen is open counts as read.
+        viewModelScope.launch {
+            conversation.collect { items ->
+                items.filterIsInstance<ConversationItem.Delivered>()
+                    .maxOfOrNull { it.message.seq }
+                    ?.let { messageRepository.markRead(groupId, it) }
+            }
+        }
     }
 
     fun refreshLatest() {
@@ -122,10 +130,6 @@ class MessagesViewModel(
 
     fun deleteFailed(clientMessageId: String) {
         viewModelScope.launch { messageRepository.deleteOutbox(clientMessageId) }
-    }
-
-    fun markReadUpTo(seq: Long) {
-        viewModelScope.launch { messageRepository.markRead(groupId, seq) }
     }
 
     fun clearError() = _state.update { it.copy(error = null) }

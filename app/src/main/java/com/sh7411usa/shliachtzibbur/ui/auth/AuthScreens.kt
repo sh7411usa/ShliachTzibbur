@@ -239,16 +239,17 @@ fun CodeVerifyScreen(
     onBack: () -> Unit,
     onStartAutoDetect: () -> Unit,
     onStopAutoDetect: () -> Unit,
-    onVerify: (String) -> Unit,
+    onVerify: (code: String, nickname: String?) -> Unit,
     onResend: () -> Unit,
 ) {
     val context = LocalContext.current
     var code by rememberSaveable { mutableStateOf("") }
+    var nickname by rememberSaveable { mutableStateOf("") }
 
     LaunchedEffect(state.detectedCode) {
         state.detectedCode?.let {
             code = it
-            if (it.length == 6) onVerify(it)
+            if (it.length == 6 && !state.needsNickname) onVerify(it, null)
         }
     }
 
@@ -312,6 +313,21 @@ fun CodeVerifyScreen(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
                     modifier = Modifier.fillMaxWidth(),
                 )
+                if (state.needsNickname) {
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        stringResource(R.string.auth_nickname_needed),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    OutlinedTextField(
+                        value = nickname,
+                        onValueChange = { nickname = it.take(64) },
+                        label = { Text(stringResource(R.string.auth_nickname_label)) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
                 state.error?.let { error ->
                     Text(
                         error.toUserMessage(),
@@ -323,8 +339,8 @@ fun CodeVerifyScreen(
                 Spacer(Modifier.height(24.dp))
                 PrimaryButton(
                     text = stringResource(R.string.auth_verify),
-                    onClick = { onVerify(code) },
-                    enabled = code.length == 6,
+                    onClick = { onVerify(code, nickname.takeIf { state.needsNickname }) },
+                    enabled = code.length == 6 && (!state.needsNickname || nickname.isNotBlank()),
                     loading = state.submitting,
                     modifier = Modifier.fillMaxWidth(),
                 )

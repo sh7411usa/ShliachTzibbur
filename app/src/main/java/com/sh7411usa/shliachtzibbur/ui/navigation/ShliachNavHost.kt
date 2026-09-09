@@ -101,7 +101,7 @@ private fun NavGraphBuilder.authGraph(navController: NavHostController) {
                 onBack = { navController.popBackStack() },
                 onStartAutoDetect = vm::startSmsAutoDetect,
                 onStopAutoDetect = vm::stopSmsAutoDetect,
-                onVerify = vm::verify,
+                onVerify = { code, nickname -> vm.verify(code, nickname) },
                 onResend = vm::resend,
             )
         }

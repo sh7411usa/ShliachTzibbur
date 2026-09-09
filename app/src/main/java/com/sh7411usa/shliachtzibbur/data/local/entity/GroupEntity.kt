@@ -49,7 +49,10 @@ fun GroupEntity.toDomain(muted: Boolean): Group = Group(
     memberCount = memberCount,
     muted = muted,
     readSeq = readSeq,
-    unreadCount = unreadCountHint,
+    // Unread is tracked locally: highest message seq we know about minus the
+    // highest seq the user has viewed. The server's own unreadCount never
+    // decreases, so it can't be used directly.
+    unreadCount = (lastMessageSeq - lastReadSeq).coerceAtLeast(0).toInt(),
     settings = GroupSettings(WhoCanPost.fromWire(whoCanPost), WhoCanAddMembers.fromWire(whoCanAddMembers)),
     limits = GroupLimits(memberCap, messageMaxLength, minMembersToPost),
     lastMessagePreview = lastMessagePreview,
@@ -72,9 +75,11 @@ fun Group.toEntity(existing: GroupEntity? = null): GroupEntity = GroupEntity(
     memberCap = limits.memberCap,
     messageMaxLength = limits.messageMaxLength,
     minMembersToPost = limits.minMembersToPost,
-    lastReadSeq = existing?.lastReadSeq ?: 0,
+    // First sync: seed read state from the server so a group with a real
+    // unread count shows it. Later syncs keep the locally-advanced values.
+    lastReadSeq = existing?.lastReadSeq ?: readSeq,
     deliveredSeq = existing?.deliveredSeq ?: 0,
-    lastMessageSeq = existing?.lastMessageSeq ?: 0,
+    lastMessageSeq = maxOf(existing?.lastMessageSeq ?: 0L, readSeq + unreadCount.toLong()),
     lastMessagePreview = existing?.lastMessagePreview,
     lastActivityAt = existing?.lastActivityAt ?: createdAt,
 )

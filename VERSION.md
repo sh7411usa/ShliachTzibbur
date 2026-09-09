@@ -6,6 +6,20 @@ stays in sync with `app/build.gradle.kts`.
 
 ---
 
+## 0.6 — versionCode 7 — 2026-09-09
+
+- **Unread counts**: computed locally as `lastMessageSeq - lastReadSeq` instead
+  of the server's `unreadCount` (which never decreases). `lastReadSeq` advances
+  to the newest visible message while a conversation is open, so opening a group
+  clears its badge. First sync seeds read state from the server so a genuinely
+  unread group still shows a count.
+- **Unread badge**: a small filled circle with the number (e.g. a dot showing
+  "12"), not the text "12 unread".
+- **New-user sign-in, again**: the "display name required" rejection happens at
+  `verify`, not `start`. `verify` now detects it, reveals a name field on the
+  code screen, and retries the same code with the name — no raw error, no lost
+  progress.
+
 ## 0.5 — versionCode 6 — 2026-09-09
 
 - **New-user sign-in**: broaden the detection of "a display name is required to

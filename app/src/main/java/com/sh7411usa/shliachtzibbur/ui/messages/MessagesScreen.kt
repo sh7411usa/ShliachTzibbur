@@ -73,10 +73,7 @@ fun MessagesScreen(
     // not when older history is prepended by pagination.
     val tailKey = items.lastOrNull()?.let { it.key() }
     LaunchedEffect(tailKey) {
-        if (items.isNotEmpty()) {
-            listState.animateScrollToItem(items.lastIndex)
-            (items.last() as? ConversationItem.Delivered)?.let { viewModel.markReadUpTo(it.message.seq) }
-        }
+        if (items.isNotEmpty()) listState.animateScrollToItem(items.lastIndex)
     }
 
     val isSystem = group?.kind == GroupKind.SYSTEM
