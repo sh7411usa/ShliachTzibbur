@@ -1,0 +1,32 @@
+package com.sh7411usa.shliachtzibbur.data.local.dao
+
+import androidx.room.Dao
+import androidx.room.Query
+import androidx.room.Upsert
+import com.sh7411usa.shliachtzibbur.data.local.entity.MessageEntity
+import kotlinx.coroutines.flow.Flow
+
+@Dao
+interface MessageDao {
+
+    @Query("SELECT * FROM messages WHERE groupId = :groupId ORDER BY seq ASC")
+    fun observeForGroup(groupId: String): Flow<List<MessageEntity>>
+
+    @Query("SELECT * FROM messages WHERE groupId = :groupId ORDER BY seq DESC LIMIT 1")
+    suspend fun latest(groupId: String): MessageEntity?
+
+    @Query("SELECT MIN(seq) FROM messages WHERE groupId = :groupId")
+    suspend fun minSeq(groupId: String): Long?
+
+    @Query("SELECT MAX(seq) FROM messages WHERE groupId = :groupId")
+    suspend fun maxSeq(groupId: String): Long?
+
+    @Query("SELECT COUNT(*) FROM messages WHERE groupId = :groupId AND seq > :afterSeq")
+    fun observeUnreadCount(groupId: String, afterSeq: Long): Flow<Int>
+
+    @Upsert
+    suspend fun upsert(messages: List<MessageEntity>)
+
+    @Query("DELETE FROM messages WHERE groupId = :groupId")
+    suspend fun deleteForGroup(groupId: String)
+}

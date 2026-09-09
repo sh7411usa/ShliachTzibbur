@@ -1,0 +1,149 @@
+<resources>
+    <string name="app_name">شليح تسيبور</string>
+
+    <string name="action_ok">موافق</string>
+    <string name="action_cancel">إلغاء</string>
+    <string name="action_save">حفظ</string>
+    <string name="action_retry">إعادة المحاولة</string>
+    <string name="action_back">رجوع</string>
+    <string name="action_next">التالي</string>
+    <string name="action_close">إغلاق</string>
+    <string name="action_add">إضافة</string>
+    <string name="action_create">إنشاء</string>
+    <string name="action_delete">حذف</string>
+    <string name="action_leave">مغادرة</string>
+    <string name="action_refresh">تحديث</string>
+    <string name="action_send">إرسال</string>
+    <string name="action_done">تم</string>
+    <string name="action_sign_out">تسجيل الخروج</string>
+    <string name="action_more">خيارات أخرى</string>
+
+    <string name="state_loading">جارٍ التحميل…</string>
+    <string name="state_offline">يبدو أنك غير متصل بالإنترنت.</string>
+    <string name="error_generic">حدث خطأ ما. حاول مرة أخرى.</string>
+    <string name="error_network">خطأ في الشبكة. تحقق من اتصالك.</string>
+    <string name="error_rate_limited">طلبات كثيرة جدًا. حاول مرة أخرى خلال %1$d ثانية.</string>
+    <string name="error_unauthorized">انتهت صلاحية جلستك. يرجى تسجيل الدخول مرة أخرى.</string>
+
+    <string name="auth_welcome_title">شليح تسيبور</string>
+    <string name="auth_welcome_subtitle">المراسلة الجماعية لجماعتك.</string>
+    <string name="auth_continue_with_phone">المتابعة برقم الهاتف</string>
+    <string name="auth_email_soon">تسجيل الدخول بالبريد الإلكتروني: قريبًا</string>
+    <string name="auth_google_soon">تسجيل الدخول عبر Google: قريبًا</string>
+    <string name="auth_phone_title">أدخل رقم هاتفك</string>
+    <string name="auth_phone_explain">سنرسل لك رمزًا لمرة واحدة عبر رسالة نصية.</string>
+    <string name="auth_country_code">رمز الدولة</string>
+    <string name="auth_phone_number">رقم الهاتف</string>
+    <string name="auth_display_name">اسمك</string>
+    <string name="auth_display_name_explain">يظهر للأعضاء الآخرين. يمكنك تغييره لاحقًا.</string>
+    <string name="auth_region_hint">المنطقة (مثل US)</string>
+    <string name="auth_send_code">إرسال الرمز</string>
+    <string name="auth_code_title">أدخل الرمز</string>
+    <string name="auth_code_sent_to">أُرسل إلى %1$s</string>
+    <string name="auth_code_field">رمز من 6 أرقام</string>
+    <string name="auth_verify">تحقق</string>
+    <string name="auth_resend_in">إعادة إرسال الرمز خلال %1$d ثانية</string>
+    <string name="auth_resend">إعادة إرسال الرمز</string>
+    <string name="auth_error_invalid_code">هذا الرمز غير صحيح.</string>
+    <string name="auth_error_invalid_phone">رقم الهاتف هذا لا يبدو صحيحًا.</string>
+    <string name="auth_error_invalid_name">يرجى اختيار اسم مختلف.</string>
+    <string name="auth_error_sms_failed">تعذّر إرسال رسالة نصية إلى هذا الرقم.</string>
+
+    <string name="groups_title">المجموعات</string>
+    <string name="groups_empty_title">لا توجد مجموعات بعد</string>
+    <string name="groups_empty_body">أنشئ مجموعة لبدء المراسلة.</string>
+    <string name="groups_new">مجموعة جديدة</string>
+    <string name="groups_muted">مكتومة</string>
+    <string name="groups_unread_count">%1$d غير مقروءة</string>
+    <string name="groups_member_count">%1$d أعضاء</string>
+    <string name="group_create_title">مجموعة جديدة</string>
+    <string name="group_create_name">اسم المجموعة</string>
+    <string name="group_create_category">الفئة</string>
+    <string name="group_create_submit">إنشاء مجموعة</string>
+    <string name="group_system_name">نظام تسيبور</string>
+    <string name="category_family">العائلة</string>
+    <string name="category_neighborhood">الحي</string>
+    <string name="category_shul">الكنيس</string>
+    <string name="category_school">المدرسة</string>
+    <string name="category_other">أخرى</string>
+
+    <string name="messages_input_hint">رسالة</string>
+    <string name="messages_empty">لا توجد رسائل بعد.</string>
+    <string name="messages_load_older">تحميل الرسائل الأقدم</string>
+    <string name="messages_too_small">تحتاج هذه المجموعة إلى %1$d أعضاء على الأقل قبل أن يتمكن أحد من النشر.</string>
+    <string name="messages_cannot_post">يمكن للمشرفين فقط النشر في هذه المجموعة.</string>
+    <string name="messages_system_readonly">هذه محادثة نظام للقراءة فقط.</string>
+    <string name="messages_send_failed">لم تُرسَل. اضغط لإعادة المحاولة.</string>
+    <string name="messages_sending">جارٍ الإرسال…</string>
+    <string name="messages_char_count">%1$d / %2$d</string>
+
+    <string name="group_settings_title">إعدادات المجموعة</string>
+    <string name="group_settings_name">الاسم</string>
+    <string name="group_settings_who_can_post">من يمكنه النشر</string>
+    <string name="group_settings_who_can_add">من يمكنه إضافة أعضاء</string>
+    <string name="group_settings_everyone">الجميع</string>
+    <string name="group_settings_admins">المشرفون فقط</string>
+    <string name="group_settings_mute">كتم الإشعارات</string>
+    <string name="group_settings_members">الأعضاء</string>
+    <string name="group_settings_leave">مغادرة المجموعة</string>
+    <string name="group_settings_delete">حذف المجموعة</string>
+    <string name="group_settings_leave_confirm">مغادرة هذه المجموعة؟ لن تتلقى رسائلها بعد الآن.</string>
+    <string name="group_settings_delete_confirm">حذف هذه المجموعة للجميع؟ لا يمكن التراجع عن ذلك.</string>
+    <string name="group_settings_admin_only">يمكن للمشرفين فقط تغيير هذه الإعدادات.</string>
+
+    <string name="members_title">الأعضاء</string>
+    <string name="members_add">إضافة أعضاء</string>
+    <string name="members_add_hint">أرقام الهواتف، رقم واحد في كل سطر</string>
+    <string name="members_role_admin">مشرف</string>
+    <string name="members_role_member">عضو</string>
+    <string name="members_make_admin">جعله مشرفًا</string>
+    <string name="members_remove_admin">إزالة صلاحية الإشراف</string>
+    <string name="members_remove">إزالة من المجموعة</string>
+    <string name="members_you">أنت</string>
+    <string name="members_add_result">%1$d أُضيفوا، %2$d غير مسجلين، %3$d أعضاء بالفعل</string>
+    <string name="members_error_last_admin">يجب أن تحتفظ المجموعة بمشرف واحد على الأقل.</string>
+    <string name="members_error_group_full">هذه المجموعة ممتلئة.</string>
+
+    <string name="user_settings_title">حسابك</string>
+    <string name="user_settings_display_name">الاسم المعروض</string>
+    <string name="user_settings_phone">الهاتف</string>
+    <string name="user_settings_email">البريد الإلكتروني</string>
+    <string name="user_settings_google">حساب Google</string>
+    <string name="user_settings_not_linked">غير مرتبط</string>
+    <string name="user_settings_coming_soon">قريبًا</string>
+    <string name="user_settings_devices">أجهزتك</string>
+    <string name="user_settings_this_device">هذا الجهاز</string>
+    <string name="user_settings_privacy">سياسة الخصوصية</string>
+    <string name="user_settings_terms">شروط الخدمة</string>
+
+    <string name="app_settings_title">الإعدادات</string>
+    <string name="app_settings_section_appearance">المظهر</string>
+    <string name="app_settings_section_notifications">الإشعارات</string>
+    <string name="app_settings_section_account">الحساب</string>
+    <string name="app_settings_section_about">حول</string>
+    <string name="app_settings_theme">السمة</string>
+    <string name="app_settings_theme_system">النظام</string>
+    <string name="app_settings_theme_light">فاتح</string>
+    <string name="app_settings_theme_dark">داكن</string>
+    <string name="app_settings_language">اللغة</string>
+    <string name="app_settings_language_system">إعداد النظام الافتراضي</string>
+    <string name="app_settings_notifications_enabled">إظهار إشعارات الرسائل</string>
+    <string name="app_settings_sync_service">إبقاء المزامنة قيد التشغيل في الخلفية</string>
+    <string name="app_settings_sync_service_explain">يسلّم الرسائل بسرعة عبر إبقاء اتصال مفتوح. يستهلك بطارية أكثر ويعرض إشعارًا دائمًا. عند إيقافه، تُجلب الرسائل دوريًا.</string>
+    <string name="app_settings_version">الإصدار %1$s (%2$d)</string>
+    <string name="app_settings_open_source">عميل تسيبور مفتوح المصدر</string>
+
+    <string name="notif_permission_rationale">اسمح بالإشعارات لتصلك التنبيهات بالرسائل الجديدة.</string>
+
+    <string name="notif_channel_messages">الرسائل</string>
+    <string name="notif_channel_messages_desc">رسائل جديدة في مجموعاتك</string>
+    <string name="notif_channel_sync">المزامنة في الخلفية</string>
+    <string name="notif_channel_sync_desc">يظهر بينما يُبقي التطبيق اتصالًا مفتوحًا</string>
+    <string name="notif_sync_title">شليح تسيبور</string>
+    <string name="notif_sync_text">في انتظار رسائل جديدة</string>
+    <string name="notif_you">أنت</string>
+    <string name="notif_someone">شخص ما</string>
+
+    <string name="nav_groups">المجموعات</string>
+    <string name="nav_settings">الإعدادات</string>
+</resources>

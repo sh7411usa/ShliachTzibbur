@@ -1,0 +1,149 @@
+<resources>
+    <string name="app_name">Shliach Tzibbur</string>
+
+    <string name="action_ok">Aceptar</string>
+    <string name="action_cancel">Cancelar</string>
+    <string name="action_save">Guardar</string>
+    <string name="action_retry">Reintentar</string>
+    <string name="action_back">Atrás</string>
+    <string name="action_next">Siguiente</string>
+    <string name="action_close">Cerrar</string>
+    <string name="action_add">Añadir</string>
+    <string name="action_create">Crear</string>
+    <string name="action_delete">Eliminar</string>
+    <string name="action_leave">Salir</string>
+    <string name="action_refresh">Actualizar</string>
+    <string name="action_send">Enviar</string>
+    <string name="action_done">Listo</string>
+    <string name="action_sign_out">Cerrar sesión</string>
+    <string name="action_more">Más opciones</string>
+
+    <string name="state_loading">Cargando…</string>
+    <string name="state_offline">Parece que no tienes conexión.</string>
+    <string name="error_generic">Algo salió mal. Inténtalo de nuevo.</string>
+    <string name="error_network">Error de red. Comprueba tu conexión.</string>
+    <string name="error_rate_limited">Demasiadas solicitudes. Inténtalo de nuevo en %1$d segundos.</string>
+    <string name="error_unauthorized">Tu sesión ha caducado. Vuelve a iniciar sesión.</string>
+
+    <string name="auth_welcome_title">Shliach Tzibbur</string>
+    <string name="auth_welcome_subtitle">Mensajería de grupo para tu tzibbur.</string>
+    <string name="auth_continue_with_phone">Continuar con el teléfono</string>
+    <string name="auth_email_soon">Inicio de sesión por correo: próximamente</string>
+    <string name="auth_google_soon">Inicio de sesión con Google: próximamente</string>
+    <string name="auth_phone_title">Introduce tu número de teléfono</string>
+    <string name="auth_phone_explain">Te enviaremos un código de un solo uso por SMS.</string>
+    <string name="auth_country_code">Código de país</string>
+    <string name="auth_phone_number">Número de teléfono</string>
+    <string name="auth_display_name">Tu nombre</string>
+    <string name="auth_display_name_explain">Se muestra a otros miembros. Puedes cambiarlo más tarde.</string>
+    <string name="auth_region_hint">Región (p. ej. US)</string>
+    <string name="auth_send_code">Enviar código</string>
+    <string name="auth_code_title">Introduce el código</string>
+    <string name="auth_code_sent_to">Enviado a %1$s</string>
+    <string name="auth_code_field">Código de 6 dígitos</string>
+    <string name="auth_verify">Verificar</string>
+    <string name="auth_resend_in">Reenviar código en %1$d s</string>
+    <string name="auth_resend">Reenviar código</string>
+    <string name="auth_error_invalid_code">Ese código es incorrecto.</string>
+    <string name="auth_error_invalid_phone">Ese número de teléfono no parece correcto.</string>
+    <string name="auth_error_invalid_name">Elige un nombre diferente.</string>
+    <string name="auth_error_sms_failed">No pudimos enviar un SMS a ese número.</string>
+
+    <string name="groups_title">Grupos</string>
+    <string name="groups_empty_title">Aún no hay grupos</string>
+    <string name="groups_empty_body">Crea un grupo para empezar a enviar mensajes.</string>
+    <string name="groups_new">Nuevo grupo</string>
+    <string name="groups_muted">Silenciado</string>
+    <string name="groups_unread_count">%1$d sin leer</string>
+    <string name="groups_member_count">%1$d miembros</string>
+    <string name="group_create_title">Nuevo grupo</string>
+    <string name="group_create_name">Nombre del grupo</string>
+    <string name="group_create_category">Categoría</string>
+    <string name="group_create_submit">Crear grupo</string>
+    <string name="group_system_name">Sistema Tzibbur</string>
+    <string name="category_family">Familia</string>
+    <string name="category_neighborhood">Vecindario</string>
+    <string name="category_shul">Sinagoga</string>
+    <string name="category_school">Escuela</string>
+    <string name="category_other">Otro</string>
+
+    <string name="messages_input_hint">Mensaje</string>
+    <string name="messages_empty">Aún no hay mensajes.</string>
+    <string name="messages_load_older">Cargar mensajes anteriores</string>
+    <string name="messages_too_small">Este grupo necesita al menos %1$d miembros antes de poder publicar.</string>
+    <string name="messages_cannot_post">Solo los administradores pueden publicar en este grupo.</string>
+    <string name="messages_system_readonly">Este es un hilo del sistema de solo lectura.</string>
+    <string name="messages_send_failed">No enviado. Toca para reintentar.</string>
+    <string name="messages_sending">Enviando…</string>
+    <string name="messages_char_count">%1$d / %2$d</string>
+
+    <string name="group_settings_title">Ajustes del grupo</string>
+    <string name="group_settings_name">Nombre</string>
+    <string name="group_settings_who_can_post">Quién puede publicar</string>
+    <string name="group_settings_who_can_add">Quién puede añadir miembros</string>
+    <string name="group_settings_everyone">Todos</string>
+    <string name="group_settings_admins">Solo administradores</string>
+    <string name="group_settings_mute">Silenciar notificaciones</string>
+    <string name="group_settings_members">Miembros</string>
+    <string name="group_settings_leave">Salir del grupo</string>
+    <string name="group_settings_delete">Eliminar grupo</string>
+    <string name="group_settings_leave_confirm">¿Salir de este grupo? Dejarás de recibir sus mensajes.</string>
+    <string name="group_settings_delete_confirm">¿Eliminar este grupo para todos? Esto no se puede deshacer.</string>
+    <string name="group_settings_admin_only">Solo los administradores pueden cambiar estos ajustes.</string>
+
+    <string name="members_title">Miembros</string>
+    <string name="members_add">Añadir miembros</string>
+    <string name="members_add_hint">Números de teléfono, uno por línea</string>
+    <string name="members_role_admin">Administrador</string>
+    <string name="members_role_member">Miembro</string>
+    <string name="members_make_admin">Hacer administrador</string>
+    <string name="members_remove_admin">Quitar administrador</string>
+    <string name="members_remove">Quitar del grupo</string>
+    <string name="members_you">Tú</string>
+    <string name="members_add_result">%1$d añadidos, %2$d no registrados, %3$d ya eran miembros</string>
+    <string name="members_error_last_admin">Un grupo debe conservar al menos un administrador.</string>
+    <string name="members_error_group_full">Este grupo está lleno.</string>
+
+    <string name="user_settings_title">Tu cuenta</string>
+    <string name="user_settings_display_name">Nombre visible</string>
+    <string name="user_settings_phone">Teléfono</string>
+    <string name="user_settings_email">Correo electrónico</string>
+    <string name="user_settings_google">Cuenta de Google</string>
+    <string name="user_settings_not_linked">No vinculada</string>
+    <string name="user_settings_coming_soon">Próximamente</string>
+    <string name="user_settings_devices">Tus dispositivos</string>
+    <string name="user_settings_this_device">Este dispositivo</string>
+    <string name="user_settings_privacy">Política de privacidad</string>
+    <string name="user_settings_terms">Términos del servicio</string>
+
+    <string name="app_settings_title">Ajustes</string>
+    <string name="app_settings_section_appearance">Apariencia</string>
+    <string name="app_settings_section_notifications">Notificaciones</string>
+    <string name="app_settings_section_account">Cuenta</string>
+    <string name="app_settings_section_about">Acerca de</string>
+    <string name="app_settings_theme">Tema</string>
+    <string name="app_settings_theme_system">Sistema</string>
+    <string name="app_settings_theme_light">Claro</string>
+    <string name="app_settings_theme_dark">Oscuro</string>
+    <string name="app_settings_language">Idioma</string>
+    <string name="app_settings_language_system">Predeterminado del sistema</string>
+    <string name="app_settings_notifications_enabled">Mostrar notificaciones de mensajes</string>
+    <string name="app_settings_sync_service">Mantener la sincronización en segundo plano</string>
+    <string name="app_settings_sync_service_explain">Entrega los mensajes rápidamente manteniendo una conexión abierta. Consume más batería y muestra una notificación permanente. Si se desactiva, los mensajes se obtienen periódicamente.</string>
+    <string name="app_settings_version">Versión %1$s (%2$d)</string>
+    <string name="app_settings_open_source">Cliente de Tzibbur de código abierto</string>
+
+    <string name="notif_permission_rationale">Permite las notificaciones para enterarte de los mensajes nuevos.</string>
+
+    <string name="notif_channel_messages">Mensajes</string>
+    <string name="notif_channel_messages_desc">Mensajes nuevos en tus grupos</string>
+    <string name="notif_channel_sync">Sincronización en segundo plano</string>
+    <string name="notif_channel_sync_desc">Se muestra mientras la app mantiene una conexión abierta</string>
+    <string name="notif_sync_title">Shliach Tzibbur</string>
+    <string name="notif_sync_text">Atento a mensajes nuevos</string>
+    <string name="notif_you">Tú</string>
+    <string name="notif_someone">Alguien</string>
+
+    <string name="nav_groups">Grupos</string>
+    <string name="nav_settings">Ajustes</string>
+</resources>

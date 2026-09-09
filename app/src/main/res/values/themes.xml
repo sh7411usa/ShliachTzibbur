@@ -1,5 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
 
-    <style name="Theme.ShliachTzibbur" parent="android:Theme.Material.Light.NoActionBar" />
+    <!--
+      Base application theme. Only governs the window before Compose draws (splash
+      background, system-bar defaults). All in-app colour comes from the Compose
+      theme. DayNight so the pre-Compose frame matches the system setting.
+    -->
+    <style name="Theme.ShliachTzibbur" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:windowBackground">?android:colorBackground</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLayoutInDisplayCutoutMode" tools:targetApi="o_mr1">shortEdges</item>
+    </style>
+
 </resources>

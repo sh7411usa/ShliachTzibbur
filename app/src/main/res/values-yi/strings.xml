@@ -1,0 +1,154 @@
+<!--
+  Yiddish translation. Reviewed for meaning but should be checked by a native
+  Yiddish speaker before release (noted in CODEBASE.md). Uses YIVO-style
+  orthography. Missing keys fall back to the English base.
+-->
+<resources>
+    <string name="app_name">שליח ציבור</string>
+
+    <string name="action_ok">גוט</string>
+    <string name="action_cancel">אָפּברעכן</string>
+    <string name="action_save">אויפֿהיטן</string>
+    <string name="action_retry">פּרוּוו נאָך אַ מאָל</string>
+    <string name="action_back">צוריק</string>
+    <string name="action_next">ווײַטער</string>
+    <string name="action_close">פֿאַרמאַכן</string>
+    <string name="action_add">צוגעבן</string>
+    <string name="action_create">שאַפֿן</string>
+    <string name="action_delete">אויסמעקן</string>
+    <string name="action_leave">פֿאַרלאָזן</string>
+    <string name="action_refresh">דערפֿרישן</string>
+    <string name="action_send">שיקן</string>
+    <string name="action_done">פֿאַרטיק</string>
+    <string name="action_sign_out">אַרויסלאָגירן</string>
+    <string name="action_more">מער אָפּציעס</string>
+
+    <string name="state_loading">לאָדט…</string>
+    <string name="state_offline">עס זעט אויס אַז איר זײַט נישט פֿאַרבונדן.</string>
+    <string name="error_generic">עפּעס איז שיעפֿ געגאַנגען. פּרוּוו נאָך אַ מאָל.</string>
+    <string name="error_network">נעץ־פֿעלער. קאָנטראָלירט אײַער פֿאַרבינדונג.</string>
+    <string name="error_rate_limited">צו פֿיל בקשות. פּרוּוו נאָך אַ מאָל אין %1$d סעקונדעס.</string>
+    <string name="error_unauthorized">אײַער סעסיע איז אויסגעגאַנגען. לאָגירט זיך נאָך אַ מאָל אַרײַן.</string>
+
+    <string name="auth_welcome_title">שליח ציבור</string>
+    <string name="auth_welcome_subtitle">גרופּע־מעלדונגען פֿאַר אײַער ציבור.</string>
+    <string name="auth_continue_with_phone">ווײַטער מיט טעלעפֿאָן</string>
+    <string name="auth_email_soon">אַרײַנלאָגירן מיט בליצפּאָסט – באַלד</string>
+    <string name="auth_google_soon">אַרײַנלאָגירן מיט Google – באַלד</string>
+    <string name="auth_phone_title">גיט אײַן אײַער טעלעפֿאָן־נומער</string>
+    <string name="auth_phone_explain">מיר וועלן אײַך שיקן אַ חד־פּעמיקן קאָד דורך SMS.</string>
+    <string name="auth_country_code">לאַנד־קאָד</string>
+    <string name="auth_phone_number">טעלעפֿאָן־נומער</string>
+    <string name="auth_display_name">אײַער נאָמען</string>
+    <string name="auth_display_name_explain">ווערט געוויזן צו אַנדערע מיטגלידער. איר קענט עס בײַטן שפּעטער.</string>
+    <string name="auth_region_hint">געגנט (למשל US)</string>
+    <string name="auth_send_code">שיק קאָד</string>
+    <string name="auth_code_title">גיט אײַן דעם קאָד</string>
+    <string name="auth_code_sent_to">געשיקט צו %1$s</string>
+    <string name="auth_code_field">6־ציפֿערדיקער קאָד</string>
+    <string name="auth_verify">באַשטעטיקן</string>
+    <string name="auth_resend_in">שיק קאָד נאָך אַ מאָל אין %1$d ס</string>
+    <string name="auth_resend">שיק קאָד נאָך אַ מאָל</string>
+    <string name="auth_error_invalid_code">דער קאָד איז נישט ריכטיק.</string>
+    <string name="auth_error_invalid_phone">דער טעלעפֿאָן־נומער זעט נישט אויס ריכטיק.</string>
+    <string name="auth_error_invalid_name">קלײַבט אויס אַן אַנדער נאָמען.</string>
+    <string name="auth_error_sms_failed">מיר האָבן נישט געקענט שיקן אַן SMS צו דעם נומער.</string>
+
+    <string name="groups_title">גרופּעס</string>
+    <string name="groups_empty_title">נאָך קיין גרופּעס</string>
+    <string name="groups_empty_body">שאַפֿט אַ גרופּע צו אָנהייבן שיקן מעלדונגען.</string>
+    <string name="groups_new">נײַע גרופּע</string>
+    <string name="groups_muted">געשטומט</string>
+    <string name="groups_unread_count">%1$d נישט געלייענט</string>
+    <string name="groups_member_count">%1$d מיטגלידער</string>
+    <string name="group_create_title">נײַע גרופּע</string>
+    <string name="group_create_name">גרופּע־נאָמען</string>
+    <string name="group_create_category">קאַטעגאָריע</string>
+    <string name="group_create_submit">שאַף גרופּע</string>
+    <string name="group_system_name">ציבור סיסטעם</string>
+    <string name="category_family">משפּחה</string>
+    <string name="category_neighborhood">שכנות</string>
+    <string name="category_shul">שול</string>
+    <string name="category_school">שולע</string>
+    <string name="category_other">אַנדערע</string>
+
+    <string name="messages_input_hint">מעלדונג</string>
+    <string name="messages_empty">נאָך קיין מעלדונגען.</string>
+    <string name="messages_load_older">לאָד עלטערע מעלדונגען</string>
+    <string name="messages_too_small">די גרופּע דאַרף לפּחות %1$d מיטגלידער איידער מען קען שרײַבן.</string>
+    <string name="messages_cannot_post">נאָר אַדמיניסטראַטאָרן קענען שרײַבן אין דער גרופּע.</string>
+    <string name="messages_system_readonly">דאָס איז אַ סיסטעם־שמועס נאָר צו לייענען.</string>
+    <string name="messages_send_failed">נישט צוגעשטעלט. קלאַפּט צו פּרוּוון נאָך אַ מאָל.</string>
+    <string name="messages_sending">שיקט…</string>
+    <string name="messages_char_count">%1$d / %2$d</string>
+
+    <string name="group_settings_title">גרופּע־איינשטעלונגען</string>
+    <string name="group_settings_name">נאָמען</string>
+    <string name="group_settings_who_can_post">ווער קען שרײַבן</string>
+    <string name="group_settings_who_can_add">ווער קען צוגעבן מיטגלידער</string>
+    <string name="group_settings_everyone">אַלע</string>
+    <string name="group_settings_admins">נאָר אַדמיניסטראַטאָרן</string>
+    <string name="group_settings_mute">שטום מאַכן מעלדונגען</string>
+    <string name="group_settings_members">מיטגלידער</string>
+    <string name="group_settings_leave">פֿאַרלאָז גרופּע</string>
+    <string name="group_settings_delete">אויסמעק גרופּע</string>
+    <string name="group_settings_leave_confirm">פֿאַרלאָזן די גרופּע? איר וועט אויפֿהערן באַקומען אירע מעלדונגען.</string>
+    <string name="group_settings_delete_confirm">אויסמעקן די גרופּע פֿאַר אַלעמען? דאָס קען מען נישט צוריקדרייען.</string>
+    <string name="group_settings_admin_only">נאָר אַדמיניסטראַטאָרן קענען בײַטן די איינשטעלונגען.</string>
+
+    <string name="members_title">מיטגלידער</string>
+    <string name="members_add">צוגעבן מיטגלידער</string>
+    <string name="members_add_hint">טעלעפֿאָן־נומערן, איינער אויף אַ שורה</string>
+    <string name="members_role_admin">אַדמיניסטראַטאָר</string>
+    <string name="members_role_member">מיטגליד</string>
+    <string name="members_make_admin">מאַך אַדמיניסטראַטאָר</string>
+    <string name="members_remove_admin">אַראָפּנעם אַדמיניסטראַטאָר</string>
+    <string name="members_remove">אַראָפּנעם פֿון גרופּע</string>
+    <string name="members_you">איר</string>
+    <string name="members_add_result">%1$d צוגעגעבן, %2$d נישט רעגיסטרירט, %3$d שוין מיטגלידער</string>
+    <string name="members_error_last_admin">אַ גרופּע מוז האָבן לפּחות איין אַדמיניסטראַטאָר.</string>
+    <string name="members_error_group_full">די גרופּע איז פֿול.</string>
+
+    <string name="user_settings_title">אײַער קאָנטע</string>
+    <string name="user_settings_display_name">ווײַז־נאָמען</string>
+    <string name="user_settings_phone">טעלעפֿאָן</string>
+    <string name="user_settings_email">בליצפּאָסט</string>
+    <string name="user_settings_google">Google קאָנטע</string>
+    <string name="user_settings_not_linked">נישט פֿאַרבונדן</string>
+    <string name="user_settings_coming_soon">באַלד</string>
+    <string name="user_settings_devices">אײַערע אַפּאַראַטן</string>
+    <string name="user_settings_this_device">דער דאָזיקער אַפּאַראַט</string>
+    <string name="user_settings_privacy">פּריוואַטקייט־פּאָליסי</string>
+    <string name="user_settings_terms">באַנוצונג־תּנאָים</string>
+
+    <string name="app_settings_title">איינשטעלונגען</string>
+    <string name="app_settings_section_appearance">אויסזען</string>
+    <string name="app_settings_section_notifications">מעלדונגען</string>
+    <string name="app_settings_section_account">קאָנטע</string>
+    <string name="app_settings_section_about">וועגן</string>
+    <string name="app_settings_theme">טעמע</string>
+    <string name="app_settings_theme_system">סיסטעם</string>
+    <string name="app_settings_theme_light">ליכטיק</string>
+    <string name="app_settings_theme_dark">טונקל</string>
+    <string name="app_settings_language">שפּראַך</string>
+    <string name="app_settings_language_system">סיסטעם־פֿאַרפֿעלער</string>
+    <string name="app_settings_notifications_enabled">ווײַז מעלדונג־נאָטיפֿיקאַציעס</string>
+    <string name="app_settings_sync_service">האַלט סינכראָניזאַציע לויפֿן אין הינטערגרונט</string>
+    <string name="app_settings_sync_service_explain">צושטעלט מעלדונגען גיך דורך האַלטן אַן אָפֿענע פֿאַרבינדונג. ניצט מער באַטעריע און ווײַזט אַ שטענדיקע נאָטיפֿיקאַציע. ווען אויסגעשלאָסן, ווערן מעלדונגען געהאָלט תּקופֿהווײַז.</string>
+    <string name="app_settings_version">ווערסיע %1$s (%2$d)</string>
+    <string name="app_settings_open_source">אָפֿן־קוואַל ציבור־קליענט</string>
+
+    <string name="notif_permission_rationale">דערלויבט נאָטיפֿיקאַציעס צו וויסן וועגן נײַע מעלדונגען.</string>
+
+    <string name="notif_channel_messages">מעלדונגען</string>
+    <string name="notif_channel_messages_desc">נײַע מעלדונגען אין אײַערע גרופּעס</string>
+    <string name="notif_channel_sync">הינטערגרונט־סינכראָניזאַציע</string>
+    <string name="notif_channel_sync_desc">ווערט געוויזן בשעת די אַפּ האַלט אַן אָפֿענע פֿאַרבינדונג</string>
+    <string name="notif_sync_title">שליח ציבור</string>
+    <string name="notif_sync_text">וואַרט אויף נײַע מעלדונגען</string>
+    <string name="notif_you">איר</string>
+    <string name="notif_someone">עמעצער</string>
+
+    <string name="nav_groups">גרופּעס</string>
+    <string name="nav_settings">איינשטעלונגען</string>
+</resources>

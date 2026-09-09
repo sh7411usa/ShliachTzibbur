@@ -1,0 +1,149 @@
+<resources>
+    <string name="app_name">שליח ציבור</string>
+
+    <string name="action_ok">אישור</string>
+    <string name="action_cancel">ביטול</string>
+    <string name="action_save">שמירה</string>
+    <string name="action_retry">ניסיון חוזר</string>
+    <string name="action_back">חזרה</string>
+    <string name="action_next">הבא</string>
+    <string name="action_close">סגירה</string>
+    <string name="action_add">הוספה</string>
+    <string name="action_create">יצירה</string>
+    <string name="action_delete">מחיקה</string>
+    <string name="action_leave">יציאה</string>
+    <string name="action_refresh">רענון</string>
+    <string name="action_send">שליחה</string>
+    <string name="action_done">סיום</string>
+    <string name="action_sign_out">התנתקות</string>
+    <string name="action_more">אפשרויות נוספות</string>
+
+    <string name="state_loading">טוען…</string>
+    <string name="state_offline">נראה שאין חיבור לאינטרנט.</string>
+    <string name="error_generic">משהו השתבש. נסה שוב.</string>
+    <string name="error_network">שגיאת רשת. בדוק את החיבור שלך.</string>
+    <string name="error_rate_limited">יותר מדי בקשות. נסה שוב בעוד %1$d שניות.</string>
+    <string name="error_unauthorized">פג תוקף ההתחברות שלך. התחבר שוב.</string>
+
+    <string name="auth_welcome_title">שליח ציבור</string>
+    <string name="auth_welcome_subtitle">הודעות קבוצתיות עבור הציבור שלך.</string>
+    <string name="auth_continue_with_phone">המשך עם מספר טלפון</string>
+    <string name="auth_email_soon">התחברות באמצעות דוא\"ל – בקרוב</string>
+    <string name="auth_google_soon">התחברות באמצעות Google – בקרוב</string>
+    <string name="auth_phone_title">הזן את מספר הטלפון שלך</string>
+    <string name="auth_phone_explain">נשלח לך קוד חד-פעמי ב-SMS.</string>
+    <string name="auth_country_code">קידומת מדינה</string>
+    <string name="auth_phone_number">מספר טלפון</string>
+    <string name="auth_display_name">השם שלך</string>
+    <string name="auth_display_name_explain">מוצג לחברים אחרים. ניתן לשנות מאוחר יותר.</string>
+    <string name="auth_region_hint">אזור (למשל IL)</string>
+    <string name="auth_send_code">שליחת קוד</string>
+    <string name="auth_code_title">הזן את הקוד</string>
+    <string name="auth_code_sent_to">נשלח אל %1$s</string>
+    <string name="auth_code_field">קוד בן 6 ספרות</string>
+    <string name="auth_verify">אימות</string>
+    <string name="auth_resend_in">שליחת קוד מחדש בעוד %1$d שניות</string>
+    <string name="auth_resend">שליחת קוד מחדש</string>
+    <string name="auth_error_invalid_code">הקוד שגוי.</string>
+    <string name="auth_error_invalid_phone">מספר הטלפון לא נראה תקין.</string>
+    <string name="auth_error_invalid_name">בחר שם אחר.</string>
+    <string name="auth_error_sms_failed">לא הצלחנו לשלוח SMS למספר הזה.</string>
+
+    <string name="groups_title">קבוצות</string>
+    <string name="groups_empty_title">אין עדיין קבוצות</string>
+    <string name="groups_empty_body">צור קבוצה כדי להתחיל לשלוח הודעות.</string>
+    <string name="groups_new">קבוצה חדשה</string>
+    <string name="groups_muted">מושתק</string>
+    <string name="groups_unread_count">%1$d שלא נקראו</string>
+    <string name="groups_member_count">%1$d חברים</string>
+    <string name="group_create_title">קבוצה חדשה</string>
+    <string name="group_create_name">שם הקבוצה</string>
+    <string name="group_create_category">קטגוריה</string>
+    <string name="group_create_submit">יצירת קבוצה</string>
+    <string name="group_system_name">מערכת ציבור</string>
+    <string name="category_family">משפחה</string>
+    <string name="category_neighborhood">שכונה</string>
+    <string name="category_shul">בית כנסת</string>
+    <string name="category_school">בית ספר</string>
+    <string name="category_other">אחר</string>
+
+    <string name="messages_input_hint">הודעה</string>
+    <string name="messages_empty">אין עדיין הודעות.</string>
+    <string name="messages_load_older">טעינת הודעות קודמות</string>
+    <string name="messages_too_small">הקבוצה צריכה לפחות %1$d חברים לפני שניתן לפרסם.</string>
+    <string name="messages_cannot_post">רק מנהלים יכולים לפרסם בקבוצה זו.</string>
+    <string name="messages_system_readonly">זהו שרשור מערכת לקריאה בלבד.</string>
+    <string name="messages_send_failed">לא נשלח. הקש כדי לנסות שוב.</string>
+    <string name="messages_sending">שולח…</string>
+    <string name="messages_char_count">%1$d / %2$d</string>
+
+    <string name="group_settings_title">הגדרות הקבוצה</string>
+    <string name="group_settings_name">שם</string>
+    <string name="group_settings_who_can_post">מי יכול לפרסם</string>
+    <string name="group_settings_who_can_add">מי יכול להוסיף חברים</string>
+    <string name="group_settings_everyone">כולם</string>
+    <string name="group_settings_admins">מנהלים בלבד</string>
+    <string name="group_settings_mute">השתקת התראות</string>
+    <string name="group_settings_members">חברים</string>
+    <string name="group_settings_leave">יציאה מהקבוצה</string>
+    <string name="group_settings_delete">מחיקת הקבוצה</string>
+    <string name="group_settings_leave_confirm">לצאת מהקבוצה? תפסיק לקבל את ההודעות שלה.</string>
+    <string name="group_settings_delete_confirm">למחוק את הקבוצה עבור כולם? לא ניתן לבטל פעולה זו.</string>
+    <string name="group_settings_admin_only">רק מנהלים יכולים לשנות הגדרות אלה.</string>
+
+    <string name="members_title">חברים</string>
+    <string name="members_add">הוספת חברים</string>
+    <string name="members_add_hint">מספרי טלפון, אחד בכל שורה</string>
+    <string name="members_role_admin">מנהל</string>
+    <string name="members_role_member">חבר</string>
+    <string name="members_make_admin">הפוך למנהל</string>
+    <string name="members_remove_admin">הסר הרשאת ניהול</string>
+    <string name="members_remove">הסרה מהקבוצה</string>
+    <string name="members_you">אתה</string>
+    <string name="members_add_result">%1$d נוספו, %2$d לא רשומים, %3$d כבר חברים</string>
+    <string name="members_error_last_admin">בקבוצה חייב להישאר לפחות מנהל אחד.</string>
+    <string name="members_error_group_full">הקבוצה מלאה.</string>
+
+    <string name="user_settings_title">החשבון שלך</string>
+    <string name="user_settings_display_name">שם תצוגה</string>
+    <string name="user_settings_phone">טלפון</string>
+    <string name="user_settings_email">דוא\"ל</string>
+    <string name="user_settings_google">חשבון Google</string>
+    <string name="user_settings_not_linked">לא מקושר</string>
+    <string name="user_settings_coming_soon">בקרוב</string>
+    <string name="user_settings_devices">המכשירים שלך</string>
+    <string name="user_settings_this_device">המכשיר הזה</string>
+    <string name="user_settings_privacy">מדיניות פרטיות</string>
+    <string name="user_settings_terms">תנאי שימוש</string>
+
+    <string name="app_settings_title">הגדרות</string>
+    <string name="app_settings_section_appearance">מראה</string>
+    <string name="app_settings_section_notifications">התראות</string>
+    <string name="app_settings_section_account">חשבון</string>
+    <string name="app_settings_section_about">אודות</string>
+    <string name="app_settings_theme">ערכת נושא</string>
+    <string name="app_settings_theme_system">מערכת</string>
+    <string name="app_settings_theme_light">בהיר</string>
+    <string name="app_settings_theme_dark">כהה</string>
+    <string name="app_settings_language">שפה</string>
+    <string name="app_settings_language_system">ברירת מחדל של המערכת</string>
+    <string name="app_settings_notifications_enabled">הצגת התראות על הודעות</string>
+    <string name="app_settings_sync_service">השארת סנכרון פעיל ברקע</string>
+    <string name="app_settings_sync_service_explain">מספק הודעות במהירות על ידי שמירת חיבור פתוח. צורך יותר סוללה ומציג התראה קבועה. כשמכובה, ההודעות נטענות מעת לעת.</string>
+    <string name="app_settings_version">גרסה %1$s (%2$d)</string>
+    <string name="app_settings_open_source">לקוח ציבור בקוד פתוח</string>
+
+    <string name="notif_permission_rationale">אפשר התראות כדי לקבל עדכון על הודעות חדשות.</string>
+
+    <string name="notif_channel_messages">הודעות</string>
+    <string name="notif_channel_messages_desc">הודעות חדשות בקבוצות שלך</string>
+    <string name="notif_channel_sync">סנכרון ברקע</string>
+    <string name="notif_channel_sync_desc">מוצג בזמן שהאפליקציה שומרת חיבור פתוח</string>
+    <string name="notif_sync_title">שליח ציבור</string>
+    <string name="notif_sync_text">ממתין להודעות חדשות</string>
+    <string name="notif_you">אתה</string>
+    <string name="notif_someone">מישהו</string>
+
+    <string name="nav_groups">קבוצות</string>
+    <string name="nav_settings">הגדרות</string>
+</resources>
