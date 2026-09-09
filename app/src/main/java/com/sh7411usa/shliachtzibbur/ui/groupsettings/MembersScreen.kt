@@ -12,14 +12,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -47,6 +45,7 @@ import com.sh7411usa.shliachtzibbur.ui.common.toUserMessage
 @Composable
 fun MembersScreen(
     onBack: () -> Unit,
+    onAddMembers: (String) -> Unit,
     viewModel: MembersViewModel = viewModel(factory = AppViewModelFactory.Factory),
 ) {
     val members by viewModel.members.collectAsStateWithLifecycle()
@@ -54,7 +53,6 @@ fun MembersScreen(
     val selfId by viewModel.selfUserId.collectAsStateWithLifecycle()
     val state by viewModel.state.collectAsStateWithLifecycle()
 
-    var showAdd by remember { mutableStateOf(false) }
     val canAdd = group?.let { g ->
         g.isAdmin || g.settings.whoCanAddMembers == com.sh7411usa.shliachtzibbur.core.model.WhoCanAddMembers.EVERYONE
     } ?: false
@@ -73,7 +71,7 @@ fun MembersScreen(
                 },
                 actions = {
                     if (canAdd) {
-                        IconButton(onClick = { showAdd = true }) {
+                        IconButton(onClick = { onAddMembers(viewModel.groupId) }) {
                             Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.members_add))
                         }
                     }
@@ -108,17 +106,6 @@ fun MembersScreen(
         }
     }
 
-    if (showAdd) {
-        AddMembersDialog(
-            working = state.working,
-            result = state.addResult,
-            onDismiss = {
-                showAdd = false
-                viewModel.clearAddResult()
-            },
-            onSubmit = { raw -> viewModel.addMembers(raw, null) },
-        )
-    }
 }
 
 @Composable
@@ -192,48 +179,3 @@ private fun MemberRow(
     }
 }
 
-@Composable
-private fun AddMembersDialog(
-    working: Boolean,
-    result: com.sh7411usa.shliachtzibbur.core.model.AddMembersResult?,
-    onDismiss: () -> Unit,
-    onSubmit: (String) -> Unit,
-) {
-    var text by remember { mutableStateOf("") }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.members_add)) },
-        text = {
-            Column {
-                OutlinedTextField(
-                    value = text,
-                    onValueChange = { text = it },
-                    label = { Text(stringResource(R.string.members_add_hint)) },
-                    minLines = 3,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                result?.let {
-                    Text(
-                        stringResource(
-                            R.string.members_add_result,
-                            it.added.size,
-                            it.notFound.size,
-                            it.alreadyMember.size,
-                        ),
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(top = 8.dp),
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = { onSubmit(text) },
-                enabled = !working && text.isNotBlank(),
-            ) { Text(stringResource(R.string.action_add)) }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close)) }
-        },
-    )
-}

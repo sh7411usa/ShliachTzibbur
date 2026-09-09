@@ -176,30 +176,72 @@ fun DevicesScreen(
         },
     ) { padding ->
         val devices = state.devices
-        when {
-            devices == null || state.devicesLoading -> LoadingBox(Modifier.padding(padding))
-            else -> LazyColumn(
-                Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-            ) {
-                items(devices, key = { it.id }) { device -> DeviceRow(device) }
+        androidx.compose.material3.pulltorefresh.PullToRefreshBox(
+            isRefreshing = state.devicesLoading,
+            onRefresh = { viewModel.loadDevices() },
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
+        ) {
+            if (devices == null && state.devicesLoading) {
+                LoadingBox()
+            } else {
+                LazyColumn(Modifier.fillMaxSize()) {
+                    if (state.deviceRemovalUnsupported) {
+                        item {
+                            Text(
+                                stringResource(R.string.devices_removal_unsupported),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(16.dp),
+                            )
+                        }
+                    }
+                    items(devices.orEmpty(), key = { it.id }) { device ->
+                        DeviceRow(
+                            device = device,
+                            isCurrent = device.id == state.currentDeviceId,
+                            canRemove = device.id != state.currentDeviceId && !state.deviceRemovalUnsupported,
+                            onRemove = { viewModel.removeDevice(device.id) },
+                        )
+                        ThinDivider(Modifier.padding(start = 16.dp))
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-private fun DeviceRow(device: Device) {
-    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp)) {
-        Text(device.deviceModel.ifBlank { device.platform }, style = MaterialTheme.typography.bodyLarge)
-        val lastSeen = Timestamps.formatDate(device.lastSeenAt)
-        if (lastSeen.isNotEmpty()) {
+private fun DeviceRow(
+    device: Device,
+    isCurrent: Boolean,
+    canRemove: Boolean,
+    onRemove: () -> Unit,
+) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
             Text(
-                lastSeen,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                device.deviceModel.ifBlank { device.platform } +
+                    if (isCurrent) " · " + stringResource(R.string.user_settings_this_device) else "",
+                style = MaterialTheme.typography.bodyLarge,
             )
+            val lastSeen = Timestamps.formatDate(device.lastSeenAt)
+            if (lastSeen.isNotEmpty()) {
+                Text(
+                    lastSeen,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        if (canRemove) {
+            TextButton(onClick = onRemove) { Text(stringResource(R.string.action_delete)) }
         }
     }
 }

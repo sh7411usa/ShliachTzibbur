@@ -7,6 +7,13 @@
     <string name="app_name">שליח ציבור</string>
 
     <string name="action_allow">דערלויבן</string>
+    <string name="add_members_title">צוגעבן מיטגלידער</string>
+    <string name="add_members_search">זוך קאָנטאַקטן</string>
+    <string name="add_members_type_number">טיפּ אַ נומער</string>
+    <string name="add_members_confirm">צוגעבן %1$d</string>
+    <string name="add_members_already_member">שוין אַ מיטגליד</string>
+    <string name="add_members_needs_contacts">דערלויב צוטריט צו קאָנטאַקטן צו קלײַבן מענטשן, אָדער טיפּ אַ נומער אויבן.</string>
+    <string name="devices_removal_unsupported">דער סערווער שטיצט נאָך נישט אַראָפּנעמען אַפּאַראַטן.</string>
     <string name="auth_phone_e164_label">טעלעפֿאָן־נומער (מיט לאַנד־קאָד)</string>
     <string name="auth_choose_number">וועלכער נומער?</string>
     <string name="auth_other_number">אַן אַנדער נומער</string>

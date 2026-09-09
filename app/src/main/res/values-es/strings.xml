@@ -2,6 +2,13 @@
     <string name="app_name">Shliach Tzibbur</string>
 
     <string name="action_allow">Permitir</string>
+    <string name="add_members_title">Añadir miembros</string>
+    <string name="add_members_search">Buscar contactos</string>
+    <string name="add_members_type_number">Escribe un número</string>
+    <string name="add_members_confirm">Añadir %1$d</string>
+    <string name="add_members_already_member">Ya es miembro</string>
+    <string name="add_members_needs_contacts">Permite el acceso a tus contactos para elegir personas, o escribe un número arriba.</string>
+    <string name="devices_removal_unsupported">El servidor aún no permite eliminar dispositivos.</string>
     <string name="auth_phone_e164_label">Número de teléfono (con código de país)</string>
     <string name="auth_choose_number">¿Qué número?</string>
     <string name="auth_other_number">Otro número</string>

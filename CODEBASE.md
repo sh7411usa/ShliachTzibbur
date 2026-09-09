@@ -57,8 +57,9 @@ com.sh7411usa.shliachtzibbur
 │   │                        core-library desugaring)
 │   │   SimNumbers           best-effort device MSISDN discovery via SubscriptionManager;
 │   │                        returns Prefill / ChooseSim / NeedsPermission / None
-│   │   SmsCodeReceiver      RECEIVE_SMS listener that suspends until a code-shaped SMS
-│   │                        arrives (used to auto-fill the verification code)
+│   │   SmsCodeReceiver      scans the recent inbox (READ_SMS) and listens for a live
+│   │                        SMS (RECEIVE_SMS, RECEIVER_EXPORTED); extractCode() prefers
+│   │                        digits after the word "code". Auto-fills the OTP.
 │   │
 │   └── net/
 │       NetJson              shared kotlinx.serialization Json (lenient, tolerant)
@@ -165,7 +166,10 @@ com.sh7411usa.shliachtzibbur
                              + MessagesScreen (bubbles, system-thread style, input bar
                              with post-permission gating, Retry/Delete menu on a
                              failed bubble)
-    groupsettings/           GroupSettingsViewModel + GroupSettingsScreen (name,
+    groupsettings/           AddMembersViewModel + AddMembersScreen (searchable contact
+                             multi-select picker + type-a-number; already-members
+                             disabled), plus
+                             GroupSettingsViewModel + GroupSettingsScreen (name,
                              whoCanPost/whoCanAddMembers, mute, leave, delete),
                              MembersViewModel + MembersScreen (+ add-members dialog,
                              promote/demote/remove)
@@ -282,4 +286,12 @@ Non-Jetpack: OkHttp (HTTP **and** WebSocket — no usable WebSocket client at
   with a follow-up `PATCH` (nested settings-at-creation is unverified in the API).
 - The auth token is stored in app-private DataStore, not the Keystore — a
   reasonable hardening follow-up.
-- Contact picking is manual phone entry (no `READ_CONTACTS` permission yet).
+- **Device removal** is not in the documented API. The app calls
+  `DELETE /v1/me/devices/{id}` best-effort and disables the action if the server
+  rejects it (404/405/501). If the server keeps stale devices there is nothing
+  the client can do beyond re-fetching.
+- **`RECEIVE_SMS` / `READ_SMS`** are Play-Store-restricted permissions (only
+  default-SMS apps normally get them). Fine for this app's distribution model
+  but would block a Play listing without a policy exception.
+- Live delivery depends on the server honouring the WebSocket `ack` frame to
+  start pushing; the 5s conversation poll is the fallback if it doesn't.

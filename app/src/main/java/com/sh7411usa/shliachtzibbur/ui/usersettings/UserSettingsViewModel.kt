@@ -8,6 +8,8 @@ import com.sh7411usa.shliachtzibbur.core.model.LegalKind
 import com.sh7411usa.shliachtzibbur.core.model.User
 import com.sh7411usa.shliachtzibbur.core.result.ApiException
 import com.sh7411usa.shliachtzibbur.core.result.ApiResult
+import com.sh7411usa.shliachtzibbur.core.result.ErrorType
+import com.sh7411usa.shliachtzibbur.data.prefs.SessionStore
 import com.sh7411usa.shliachtzibbur.data.repo.AuthRepository
 import com.sh7411usa.shliachtzibbur.data.repo.LegalRepository
 import com.sh7411usa.shliachtzibbur.data.repo.ProfileRepository
@@ -15,6 +17,7 @@ import com.sh7411usa.shliachtzibbur.sync.SyncController
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -24,6 +27,9 @@ data class UserSettingsUiState(
     val error: ApiException? = null,
     val devices: List<Device>? = null,
     val devicesLoading: Boolean = false,
+    val currentDeviceId: String? = null,
+    /** True once the server has told us device removal isn't available. */
+    val deviceRemovalUnsupported: Boolean = false,
     val legal: LegalDocument? = null,
     val legalLoading: Boolean = false,
 )
@@ -33,6 +39,7 @@ class UserSettingsViewModel(
     private val legalRepository: LegalRepository,
     private val authRepository: AuthRepository,
     private val syncController: SyncController,
+    private val sessionStore: SessionStore,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(UserSettingsUiState())
@@ -65,16 +72,41 @@ class UserSettingsViewModel(
     }
 
     fun loadDevices() {
-        if (_state.value.devicesLoading) return
-        _state.update { it.copy(devicesLoading = true) }
+        _state.update { it.copy(devicesLoading = true, error = null) }
         viewModelScope.launch {
+            val currentId = sessionStore.session.first()?.deviceId
             when (val result = profileRepository.devices()) {
                 is ApiResult.Success -> _state.update {
-                    it.copy(devicesLoading = false, devices = result.value)
+                    it.copy(
+                        devicesLoading = false,
+                        currentDeviceId = currentId,
+                        devices = result.value.sortedWith(
+                            compareByDescending<Device> { d -> d.id == currentId }
+                                .thenByDescending { d -> d.lastSeenAt.orEmpty() },
+                        ),
+                    )
                 }
 
                 is ApiResult.Failure -> _state.update {
                     it.copy(devicesLoading = false, error = result.error)
+                }
+            }
+        }
+    }
+
+    fun removeDevice(deviceId: String) {
+        _state.update { it.copy(error = null) }
+        viewModelScope.launch {
+            when (val result = profileRepository.removeDevice(deviceId)) {
+                is ApiResult.Success -> loadDevices()
+                is ApiResult.Failure -> {
+                    val notSupported = result.error.status in setOf(404, 405, 501) ||
+                        result.error.type == ErrorType.NOT_IMPLEMENTED ||
+                        result.error.type == ErrorType.NOT_FOUND
+                    _state.update {
+                        if (notSupported) it.copy(deviceRemovalUnsupported = true)
+                        else it.copy(error = result.error)
+                    }
                 }
             }
         }

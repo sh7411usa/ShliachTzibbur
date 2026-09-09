@@ -252,16 +252,19 @@ fun CodeVerifyScreen(
         }
     }
 
+    val smsPermissions = arrayOf(
+        android.Manifest.permission.RECEIVE_SMS,
+        android.Manifest.permission.READ_SMS,
+    )
     val smsPermissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission(),
-    ) { granted -> if (granted) onStartAutoDetect() }
+        ActivityResultContracts.RequestMultiplePermissions(),
+    ) { onStartAutoDetect() }
 
     LaunchedEffect(Unit) {
-        val granted = ContextCompat.checkSelfPermission(
-            context,
-            android.Manifest.permission.RECEIVE_SMS,
-        ) == PackageManager.PERMISSION_GRANTED
-        if (granted) onStartAutoDetect() else smsPermissionLauncher.launch(android.Manifest.permission.RECEIVE_SMS)
+        val anyGranted = smsPermissions.any {
+            ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+        }
+        if (anyGranted) onStartAutoDetect() else smsPermissionLauncher.launch(smsPermissions)
     }
 
     Scaffold(

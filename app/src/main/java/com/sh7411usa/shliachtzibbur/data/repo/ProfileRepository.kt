@@ -24,6 +24,9 @@ class ProfileRepository(private val api: TzibburApi) {
     suspend fun devices(): ApiResult<List<Device>> =
         apiCatching { api.getDevices() }
 
+    suspend fun removeDevice(deviceId: String): ApiResult<Unit> =
+        apiCatching { api.deleteDevice(deviceId) }
+
     fun clear() {
         _user.value = null
     }

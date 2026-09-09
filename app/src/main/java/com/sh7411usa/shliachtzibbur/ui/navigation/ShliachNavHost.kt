@@ -26,6 +26,7 @@ import com.sh7411usa.shliachtzibbur.ui.auth.PhoneEntryScreen
 import com.sh7411usa.shliachtzibbur.ui.contacts.ContactsScreen
 import com.sh7411usa.shliachtzibbur.ui.groups.CreateGroupScreen
 import com.sh7411usa.shliachtzibbur.ui.groups.GroupsScreen
+import com.sh7411usa.shliachtzibbur.ui.groupsettings.AddMembersScreen
 import com.sh7411usa.shliachtzibbur.ui.groupsettings.GroupSettingsScreen
 import com.sh7411usa.shliachtzibbur.ui.groupsettings.MembersScreen
 import com.sh7411usa.shliachtzibbur.ui.messages.MessagesScreen
@@ -180,7 +181,16 @@ private fun NavGraphBuilder.mainGraph(navController: NavHostController) {
             route = Routes.MEMBERS,
             arguments = listOf(navArgument("groupId") { type = NavType.StringType }),
         ) {
-            MembersScreen(onBack = { navController.popBackStack() })
+            MembersScreen(
+                onBack = { navController.popBackStack() },
+                onAddMembers = { id -> navController.navigate(Routes.addMembers(id)) },
+            )
+        }
+        composable(
+            route = Routes.ADD_MEMBERS,
+            arguments = listOf(navArgument("groupId") { type = NavType.StringType }),
+        ) {
+            AddMembersScreen(onDone = { navController.popBackStack() })
         }
         composable(Routes.USER_SETTINGS) {
             UserSettingsScreen(

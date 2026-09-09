@@ -13,6 +13,7 @@ import com.sh7411usa.shliachtzibbur.ui.auth.AuthViewModel
 import com.sh7411usa.shliachtzibbur.ui.contacts.ContactsViewModel
 import com.sh7411usa.shliachtzibbur.ui.groups.CreateGroupViewModel
 import com.sh7411usa.shliachtzibbur.ui.groups.GroupsViewModel
+import com.sh7411usa.shliachtzibbur.ui.groupsettings.AddMembersViewModel
 import com.sh7411usa.shliachtzibbur.ui.groupsettings.GroupSettingsViewModel
 import com.sh7411usa.shliachtzibbur.ui.groupsettings.MembersViewModel
 import com.sh7411usa.shliachtzibbur.ui.messages.MessagesViewModel
@@ -82,11 +83,19 @@ object AppViewModelFactory {
             )
         }
         initializer {
+            AddMembersViewModel(
+                savedStateHandle = createSavedStateHandle(),
+                contactsRepository = container.contactsRepository,
+                memberRepository = container.memberRepository,
+            )
+        }
+        initializer {
             UserSettingsViewModel(
                 profileRepository = container.profileRepository,
                 legalRepository = container.legalRepository,
                 authRepository = container.authRepository,
                 syncController = container.syncController,
+                sessionStore = container.sessionStore,
             )
         }
         initializer {

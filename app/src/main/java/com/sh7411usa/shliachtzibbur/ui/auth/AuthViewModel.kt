@@ -156,7 +156,7 @@ class AuthViewModel(
 
     fun startSmsAutoDetect() {
         if (autoDetectJob?.isActive == true) return
-        if (!smsCodeReceiver.hasPermission()) return
+        if (!smsCodeReceiver.hasAnyPermission()) return
         _state.update { it.copy(autoDetecting = true) }
         autoDetectJob = viewModelScope.launch {
             val code = smsCodeReceiver.awaitCode(timeoutMs = 90_000L)

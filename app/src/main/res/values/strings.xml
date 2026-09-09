@@ -123,6 +123,12 @@
     <string name="members_add_result">%1$d added, %2$d not registered, %3$d already members</string>
     <string name="members_error_last_admin">A group must keep at least one admin.</string>
     <string name="members_error_group_full">This group is full.</string>
+    <string name="add_members_title">Add members</string>
+    <string name="add_members_search">Search contacts</string>
+    <string name="add_members_type_number">Type a number</string>
+    <string name="add_members_confirm">Add %1$d</string>
+    <string name="add_members_already_member">Already a member</string>
+    <string name="add_members_needs_contacts">Allow access to your contacts to pick people, or type a number above.</string>
 
     <!-- User settings -->
     <string name="user_settings_title">Your account</string>
@@ -134,6 +140,7 @@
     <string name="user_settings_coming_soon">Coming soon</string>
     <string name="user_settings_devices">Your devices</string>
     <string name="user_settings_this_device">This device</string>
+    <string name="devices_removal_unsupported">Removing devices isn\'t supported by the server yet.</string>
     <string name="user_settings_privacy">Privacy Policy</string>
     <string name="user_settings_terms">Terms of Service</string>
 

@@ -17,6 +17,7 @@ object Routes {
     const val MESSAGES = "group/{groupId}/messages"
     const val GROUP_SETTINGS = "group/{groupId}/settings"
     const val MEMBERS = "group/{groupId}/members"
+    const val ADD_MEMBERS = "group/{groupId}/members/add"
 
     const val CREATE_GROUP = "groups/new?memberPhone={memberPhone}"
     const val ARG_MEMBER_PHONE = "memberPhone"
@@ -28,6 +29,7 @@ object Routes {
     fun messages(groupId: String) = "group/$groupId/messages"
     fun groupSettings(groupId: String) = "group/$groupId/settings"
     fun members(groupId: String) = "group/$groupId/members"
+    fun addMembers(groupId: String) = "group/$groupId/members/add"
     fun legal(kind: String) = "settings/legal/$kind"
 
     fun createGroup(memberPhone: String? = null): String =

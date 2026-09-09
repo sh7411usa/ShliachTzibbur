@@ -105,6 +105,10 @@ class TzibburApi(private val engine: HttpEngine) {
     suspend fun getDevices(): List<Device> =
         request<DeviceListDto>(Method.GET, "/v1/me/devices").items.map { it.toDomain() }
 
+    /** Best-effort — device removal is not in the documented API; callers handle 404/501/405. */
+    suspend fun deleteDevice(deviceId: String) =
+        requestUnit(Method.DELETE, "/v1/me/devices/$deviceId")
+
     // ---- Contacts ----
 
     suspend fun checkContacts(phones: List<String>, region: String?): List<String> =

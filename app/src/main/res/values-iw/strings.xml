@@ -2,6 +2,13 @@
     <string name="app_name">שליח ציבור</string>
 
     <string name="action_allow">אישור</string>
+    <string name="add_members_title">הוספת חברים</string>
+    <string name="add_members_search">חיפוש אנשי קשר</string>
+    <string name="add_members_type_number">הקלד מספר</string>
+    <string name="add_members_confirm">הוסף %1$d</string>
+    <string name="add_members_already_member">כבר חבר</string>
+    <string name="add_members_needs_contacts">אשר גישה לאנשי הקשר כדי לבחור אנשים, או הקלד מספר למעלה.</string>
+    <string name="devices_removal_unsupported">השרת עדיין אינו תומך בהסרת מכשירים.</string>
     <string name="auth_phone_e164_label">מספר טלפון (עם קידומת מדינה)</string>
     <string name="auth_choose_number">איזה מספר?</string>
     <string name="auth_other_number">מספר אחר</string>

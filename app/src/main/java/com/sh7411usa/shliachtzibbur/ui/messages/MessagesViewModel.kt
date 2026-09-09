@@ -65,12 +65,13 @@ class MessagesViewModel(
         viewModelScope.launch {
             runCatching { syncManager.runWebSocketSession() }
         }
-        // Confirm/expire queued sends while the screen is open.
+        // Poll for new messages while the screen is open (fallback if the live
+        // WebSocket push isn't flowing), and confirm/expire queued sends.
         viewModelScope.launch {
             while (isActive) {
-                delay(4_000)
+                delay(5_000)
+                messageRepository.refreshLatest(groupId)
                 if (conversation.value.any { it is ConversationItem.Pending }) {
-                    messageRepository.refreshLatest(groupId)
                     messageRepository.sweepStuckOutbox(groupId)
                 }
             }

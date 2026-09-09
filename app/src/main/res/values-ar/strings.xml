@@ -2,6 +2,13 @@
     <string name="app_name">شليح تسيبور</string>
 
     <string name="action_allow">السماح</string>
+    <string name="add_members_title">إضافة أعضاء</string>
+    <string name="add_members_search">البحث في جهات الاتصال</string>
+    <string name="add_members_type_number">اكتب رقمًا</string>
+    <string name="add_members_confirm">إضافة %1$d</string>
+    <string name="add_members_already_member">عضو بالفعل</string>
+    <string name="add_members_needs_contacts">اسمح بالوصول إلى جهات اتصالك لاختيار أشخاص، أو اكتب رقمًا في الأعلى.</string>
+    <string name="devices_removal_unsupported">لا يدعم الخادم إزالة الأجهزة بعد.</string>
     <string name="auth_phone_e164_label">رقم الهاتف (مع رمز الدولة)</string>
     <string name="auth_choose_number">أي رقم؟</string>
     <string name="auth_other_number">رقم آخر</string>

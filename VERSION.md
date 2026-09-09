@@ -6,6 +6,32 @@ stays in sync with `app/build.gradle.kts`.
 
 ---
 
+## 0.3 — versionCode 4 — 2026-09-09
+
+Fixes from a second round of testing.
+
+- **SMS code auto-detect**: the `SMS_RECEIVED` receiver is now registered
+  `RECEIVER_EXPORTED` (required for the system SMS broadcast), and on start we
+  also scan the inbox for a matching message from the last 25s (covers a code
+  that landed during the permission dialog). Extraction prefers digits right
+  after the word "code" (the real format is `Your tzibbur code: 000000`).
+  `READ_SMS` added for the inbox scan.
+- **Live messages**: after the WebSocket delivers its backlog the client now
+  sends the WebSocket `ack` frame on that connection (previously only a REST
+  ack), which is what makes the server start pushing live. Fixed a
+  subscribe-after-emit race so the backlog isn't lost. The conversation screen
+  also polls `refreshLatest` every 5s as a guaranteed fallback. WebSocket
+  connect / ack / close are logged.
+- **Devices**: the list now force-refreshes on every visit and via
+  pull-to-refresh, marks "This device", sorts current-first, and offers a
+  Remove action (best-effort `DELETE /v1/me/devices/{id}` — not in the
+  documented API; a 404/405/501 disables the action and shows a notice).
+- **Add members**: replaced the "one number per line" text box with a contact
+  picker — searchable, tap to multi-select, contacts already in the group shown
+  disabled, plus a "type a number" field. Backed by the existing
+  `ContactsRepository` + `/v1/contacts/check`.
+- **Permissions added**: `READ_SMS`.
+
 ## 0.2 — versionCode 3 — 2026-09-09
 
 Second pass — login flow, contacts, groups UI, and a messaging fix.

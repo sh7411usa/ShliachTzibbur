@@ -13,7 +13,9 @@ import com.sh7411usa.shliachtzibbur.data.prefs.SessionStore
 import com.sh7411usa.shliachtzibbur.data.prefs.SettingsStore
 import com.sh7411usa.shliachtzibbur.data.repo.GroupRepository
 import com.sh7411usa.shliachtzibbur.data.repo.MessageRepository
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.onSubscription
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.coroutineScope
 
@@ -84,18 +86,35 @@ class SyncManager(
      */
     suspend fun runWebSocketSession() = coroutineScope {
         val socket = webSocketFactory()
+        val collectorReady = CompletableDeferred<Unit>()
         launch {
-            socket.events.collect { event ->
-                when (event) {
-                    is WsEvent.Hello -> Log.d("ws hello user=${event.userId} device=${event.deviceId}")
-                    is WsEvent.Messages -> applyWebSocketMessages(event.groupId, event.messages)
-                    is WsEvent.GroupChanged -> groupRepository.onExternalGroupChange(event.groupId)
-                    is WsEvent.ErrorFrame -> Log.w("ws error ${event.code}: ${event.detail}")
-                    WsEvent.Pong -> Unit
-                    is WsEvent.Unknown -> Log.d("ws unknown frame ${event.type}")
+            socket.events
+                .onSubscription { collectorReady.complete(Unit) }
+                .collect { event ->
+                    when (event) {
+                        is WsEvent.Hello ->
+                            Log.i("ws hello user=${event.userId} device=${event.deviceId}")
+
+                        is WsEvent.Messages -> {
+                            applyWebSocketMessages(event.groupId, event.messages)
+                            val maxSeq = event.messages.maxOfOrNull { it.seq }
+                            if (maxSeq != null) {
+                                // Ack on the socket so the server starts live pushes.
+                                socket.ack(event.groupId, maxSeq)
+                                Log.i("ws acked ${event.groupId}@$maxSeq (${event.messages.size} msgs)")
+                            }
+                        }
+
+                        is WsEvent.GroupChanged -> groupRepository.onExternalGroupChange(event.groupId)
+                        is WsEvent.ErrorFrame -> Log.w("ws error ${event.code}: ${event.detail}")
+                        WsEvent.Pong -> Unit
+                        is WsEvent.Unknown -> Log.d("ws unknown frame ${event.type}")
+                    }
                 }
-            }
         }
+        // Don't start the socket until the collector is attached, or the
+        // hello/backlog frames (replay = 0) are lost.
+        collectorReady.await()
         socket.run()
     }
 

@@ -64,7 +64,9 @@ class TzibburWebSocket(
                 continue
             }
             try {
+                Log.i("WebSocket connecting to $wsUrl")
                 connectOnce(token)
+                Log.i("WebSocket closed cleanly")
                 attempt = 0 // clean disconnect -> reset backoff
             } catch (e: CancellationException) {
                 throw e
@@ -88,6 +90,10 @@ class TzibburWebSocket(
         val incoming = Channel<String>(Channel.UNLIMITED)
 
         val listener = object : WebSocketListener() {
+            override fun onOpen(webSocket: WebSocket, response: Response) {
+                Log.i("WebSocket open (${response.code})")
+            }
+
             override fun onMessage(webSocket: WebSocket, text: String) {
                 incoming.trySend(text)
             }
@@ -113,7 +119,9 @@ class TzibburWebSocket(
         val ackJob = launch {
             while (isActive) {
                 val ack = ackQueue.receive()
-                if (!socket.send(WsOutbound.ack(ack.groupId, ack.seq))) {
+                val sent = socket.send(WsOutbound.ack(ack.groupId, ack.seq))
+                Log.d("WebSocket ack frame ${ack.groupId}@${ack.seq} sent=$sent")
+                if (!sent) {
                     // Socket gone; re-queue and stop pumping for this connection.
                     ackQueue.trySend(ack)
                     break
