@@ -6,6 +6,16 @@ stays in sync with `app/build.gradle.kts`.
 
 ---
 
+## 0.4 — versionCode 5 — 2026-09-09
+
+- **Fix crash on sign out**: `AuthRepository.signOut()` called
+  `RoomDatabase.clearAllTables()` on the main thread (via `viewModelScope`); now
+  wrapped in `Dispatchers.IO`.
+- **Markdown in Privacy Policy / Terms**: new dependency-free `MarkdownText`
+  composable (headings, bold/italic, inline code, links, bullet/numbered lists,
+  horizontal rules); `LegalScreen` uses it instead of plain text.
+- Added `README.md`.
+
 ## 0.3 — versionCode 4 — 2026-09-09
 
 Fixes from a second round of testing.

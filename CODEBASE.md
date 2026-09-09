@@ -143,7 +143,9 @@ com.sh7411usa.shliachtzibbur
     common/                  rememberIsTouchDevice, Modifier.focusHighlight (D-pad
                              focus ring), LoadingBox / EmptyState / ErrorRow /
                              ConfirmDialog / SectionHeader / SegmentedChoice /
-                             PrimaryButton / SecondaryButton, ApiException.toUserMessage
+                             PrimaryButton / SecondaryButton, ApiException.toUserMessage,
+                             MarkdownText (dependency-free CommonMark subset renderer,
+                             used by the legal screens)
     navigation/              Routes, ShliachNavHost (auth graph vs main graph chosen by
                              session; no bottom nav — Groups is the single home,
                              Contacts/Settings are top-bar destinations)

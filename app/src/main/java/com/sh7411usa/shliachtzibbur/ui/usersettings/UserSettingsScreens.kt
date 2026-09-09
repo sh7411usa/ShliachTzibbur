@@ -280,9 +280,8 @@ fun LegalScreen(
     ) { padding ->
         when {
             state.legalLoading || state.legal == null -> LoadingBox(Modifier.padding(padding))
-            else -> Text(
-                state.legal!!.text,
-                style = MaterialTheme.typography.bodyMedium,
+            else -> com.sh7411usa.shliachtzibbur.ui.common.MarkdownText(
+                markdown = state.legal!!.text,
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)

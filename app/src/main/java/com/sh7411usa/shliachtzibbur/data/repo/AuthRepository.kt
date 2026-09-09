@@ -10,7 +10,10 @@ import com.sh7411usa.shliachtzibbur.core.result.apiCatching
 import com.sh7411usa.shliachtzibbur.core.util.DeviceInfo
 import com.sh7411usa.shliachtzibbur.data.local.AppDatabase
 import com.sh7411usa.shliachtzibbur.data.prefs.SessionStore
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.withContext
 
 /**
  * Authentication and session lifecycle. Only [AuthMethod.Sms] is wired; the
@@ -64,9 +67,15 @@ class AuthRepository(
         }
     }
 
-    /** Clear all local state. Network-side device revocation is not exposed by the API. */
+    /**
+     * Clear all local state. The cache is cleared *before* the session so the
+     * screen isn't torn down (session -> null drives navigation) mid-wipe.
+     * Network-side device revocation is not exposed by the API.
+     */
     suspend fun signOut() {
+        withContext(NonCancellable + Dispatchers.IO) {
+            runCatching { database.clearAllTables() }
+        }
         sessionStore.clear()
-        database.clearAllTables()
     }
 }
