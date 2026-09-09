@@ -246,7 +246,10 @@ fun CodeVerifyScreen(
     var code by rememberSaveable { mutableStateOf("") }
 
     LaunchedEffect(state.detectedCode) {
-        state.detectedCode?.let { code = it }
+        state.detectedCode?.let {
+            code = it
+            if (it.length == 6) onVerify(it)
+        }
     }
 
     val smsPermissionLauncher = rememberLauncherForActivityResult(

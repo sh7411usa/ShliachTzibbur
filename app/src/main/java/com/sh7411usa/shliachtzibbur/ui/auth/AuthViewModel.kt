@@ -160,8 +160,8 @@ class AuthViewModel(
         _state.update { it.copy(autoDetecting = true) }
         autoDetectJob = viewModelScope.launch {
             val code = smsCodeReceiver.awaitCode(timeoutMs = 90_000L)
+            // The screen observes detectedCode, fills the field, and submits.
             _state.update { it.copy(autoDetecting = false, detectedCode = code) }
-            if (code != null) verify(code)
         }
     }
 
