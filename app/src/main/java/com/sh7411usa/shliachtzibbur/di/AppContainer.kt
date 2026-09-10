@@ -8,6 +8,7 @@ import com.sh7411usa.shliachtzibbur.core.net.TzibburApi
 import com.sh7411usa.shliachtzibbur.core.net.ws.TzibburWebSocket
 import com.sh7411usa.shliachtzibbur.core.util.SmsCodeReceiver
 import com.sh7411usa.shliachtzibbur.data.local.AppDatabase
+import com.sh7411usa.shliachtzibbur.data.prefs.EncryptionStore
 import com.sh7411usa.shliachtzibbur.data.prefs.SessionStore
 import com.sh7411usa.shliachtzibbur.data.prefs.SettingsStore
 import com.sh7411usa.shliachtzibbur.data.repo.AuthRepository
@@ -42,6 +43,7 @@ class AppContainer(context: Context) {
 
     val sessionStore = SessionStore(appContext)
     val settingsStore = SettingsStore(appContext)
+    val encryptionStore = EncryptionStore(appContext)
 
     // Synchronous token snapshot for the OkHttp interceptor and WebSocket.
     private val tokenRef = AtomicReference<String?>(null)
@@ -68,7 +70,14 @@ class AppContainer(context: Context) {
     val profileRepository by lazy { ProfileRepository(api) }
     val groupRepository by lazy { GroupRepository(api, database.groupDao(), settingsStore) }
     val messageRepository by lazy {
-        MessageRepository(api, database.messageDao(), database.outboxDao(), database.groupDao())
+        MessageRepository(
+            api = api,
+            messageDao = database.messageDao(),
+            outboxDao = database.outboxDao(),
+            groupDao = database.groupDao(),
+            crypto = encryptionStore,
+            selfUserId = { sessionStore.session.first()?.userId },
+        )
     }
     val memberRepository by lazy { MemberRepository(api, database.memberDao()) }
     val legalRepository by lazy { LegalRepository(api) }

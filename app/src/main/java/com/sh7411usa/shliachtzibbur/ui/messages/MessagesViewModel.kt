@@ -3,12 +3,20 @@ package com.sh7411usa.shliachtzibbur.ui.messages
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.sh7411usa.shliachtzibbur.core.crypto.CryptoOutcome
+import com.sh7411usa.shliachtzibbur.core.crypto.GroupKey
+import com.sh7411usa.shliachtzibbur.core.crypto.KeyHex
+import com.sh7411usa.shliachtzibbur.core.crypto.MessageCrypto
 import com.sh7411usa.shliachtzibbur.core.model.ConversationItem
 import com.sh7411usa.shliachtzibbur.core.model.Group
+import com.sh7411usa.shliachtzibbur.core.model.MessageSecurity
 import com.sh7411usa.shliachtzibbur.core.result.ApiException
 import com.sh7411usa.shliachtzibbur.core.result.ApiResult
+import com.sh7411usa.shliachtzibbur.core.util.Ids
 import com.sh7411usa.shliachtzibbur.core.util.ReplyToken
 import com.sh7411usa.shliachtzibbur.data.prefs.AppSettings
+import com.sh7411usa.shliachtzibbur.data.prefs.GroupCrypto
+import com.sh7411usa.shliachtzibbur.data.prefs.GroupCryptoSource
 import com.sh7411usa.shliachtzibbur.data.prefs.SessionStore
 import com.sh7411usa.shliachtzibbur.data.prefs.SettingsStore
 import com.sh7411usa.shliachtzibbur.data.repo.GroupRepository
@@ -34,7 +42,12 @@ data class MessagesUiState(
     val hasMoreHistory: Boolean = true,
     val sending: Boolean = false,
     val error: ApiException? = null,
+    /** Set after a failed unlock attempt: the entered key didn't open the latest message. */
+    val keyRejected: Boolean = false,
 )
+
+/** Whether the encrypted-group gate is blocking the conversation. */
+enum class LockState { NotEncrypted, Unlocked, NeedsKey }
 
 class MessagesViewModel(
     savedStateHandle: SavedStateHandle,
@@ -44,6 +57,7 @@ class MessagesViewModel(
     private val syncManager: SyncManager,
     sessionStore: SessionStore,
     settingsStore: SettingsStore,
+    private val crypto: GroupCryptoSource,
 ) : ViewModel() {
 
     val groupId: String = requireNotNull(savedStateHandle[NavArg.GROUP_ID])
@@ -63,7 +77,7 @@ class MessagesViewModel(
                 items
             } else {
                 items.filter {
-                    it is ConversationItem.Delivered && it.message.text.contains(query, ignoreCase = true)
+                    it is ConversationItem.Delivered && it.displayText.contains(query, ignoreCase = true)
                 }
             }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
@@ -71,6 +85,30 @@ class MessagesViewModel(
     val selfUserId: StateFlow<String?> = sessionStore.session
         .map { it?.userId }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    val groupCrypto: StateFlow<GroupCrypto> = crypto.crypto(groupId)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), GroupCrypto())
+
+    /** The unfiltered stream (thread search doesn't affect the lock decision). */
+    private val rawConversation: StateFlow<List<ConversationItem>> =
+        messageRepository.conversation(groupId)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val lockState: StateFlow<LockState> =
+        combine(rawConversation, groupCrypto) { items, gc ->
+            when {
+                !gc.enabled -> LockState.NotEncrypted
+                newestCipher(items)?.security == MessageSecurity.Undecryptable -> LockState.NeedsKey
+                else -> LockState.Unlocked
+            }
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), LockState.NotEncrypted)
+
+    /** Message length budget: lower for encrypted groups (base64 + tag overhead). */
+    val maxMessageChars: StateFlow<Int> =
+        combine(group, groupCrypto) { g, gc ->
+            val base = g?.limits?.messageMaxLength ?: 1000
+            if (gc.enabled) minOf(base, ENCRYPTED_MAX_CHARS) else base
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 1000)
 
     private val _state = MutableStateFlow(MessagesUiState())
     val state: StateFlow<MessagesUiState> = _state.asStateFlow()
@@ -106,6 +144,39 @@ class MessagesViewModel(
     }
 
     fun setThreadQuery(query: String) = _threadQuery.update { query }
+
+    private fun newestCipher(items: List<ConversationItem>): ConversationItem.Delivered? =
+        items.filterIsInstance<ConversationItem.Delivered>()
+            .filter { MessageCrypto.isCipherText(it.message.text) }
+            .maxByOrNull { it.message.seq }
+
+    /**
+     * Add [hex] as a key for this group. If it opens the newest encrypted message
+     * it also becomes the active (send) key and clears the lock; otherwise it is
+     * kept (it may unlock older messages) and [MessagesUiState.keyRejected] is set.
+     */
+    fun submitKey(hex: String) {
+        val clean = hex.trim()
+        if (!KeyHex.isValid(clean)) {
+            _state.update { it.copy(keyRejected = true) }
+            return
+        }
+        viewModelScope.launch {
+            val key = GroupKey(
+                id = Ids.newUuid(),
+                hex = KeyHex.normalize(clean),
+                label = "Key " + KeyHex.normalize(clean).take(8),
+                addedAtMillis = System.currentTimeMillis(),
+            )
+            val newest = newestCipher(rawConversation.value)?.message
+            val opensNewest = newest == null ||
+                MessageCrypto.decrypt(newest.text, newest.seq, newest.senderId, listOf(key)) is CryptoOutcome.Decrypted
+            crypto.addKey(groupId, key, makeActive = opensNewest)
+            _state.update { it.copy(keyRejected = !opensNewest) }
+        }
+    }
+
+    fun clearKeyRejected() = _state.update { it.copy(keyRejected = false) }
 
     fun refreshLatest() {
         viewModelScope.launch {
@@ -162,5 +233,10 @@ class MessagesViewModel(
         if (AppForegroundState.visibleGroupId == groupId) {
             AppForegroundState.visibleGroupId = null
         }
+    }
+
+    private companion object {
+        /** base64(plaintext + "!" + 16-byte GCM tag) + "$E1:" must fit the 1000-char body. */
+        const val ENCRYPTED_MAX_CHARS = 720
     }
 }

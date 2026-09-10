@@ -8,12 +8,14 @@ import com.sh7411usa.shliachtzibbur.core.model.WhoCanAddMembers
 import com.sh7411usa.shliachtzibbur.core.model.WhoCanPost
 import com.sh7411usa.shliachtzibbur.core.result.ApiException
 import com.sh7411usa.shliachtzibbur.core.result.ApiResult
+import com.sh7411usa.shliachtzibbur.data.prefs.GroupCryptoSource
 import com.sh7411usa.shliachtzibbur.data.repo.GroupRepository
 import com.sh7411usa.shliachtzibbur.ui.NavArg
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -28,12 +30,17 @@ data class GroupSettingsUiState(
 class GroupSettingsViewModel(
     savedStateHandle: SavedStateHandle,
     private val groupRepository: GroupRepository,
+    cryptoStore: GroupCryptoSource,
 ) : ViewModel() {
 
     val groupId: String = requireNotNull(savedStateHandle[NavArg.GROUP_ID])
 
     val group: StateFlow<Group?> = groupRepository.group(groupId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    val encryptionEnabled: StateFlow<Boolean> = cryptoStore.crypto(groupId)
+        .map { it.enabled }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     private val _state = MutableStateFlow(GroupSettingsUiState())
     val state: StateFlow<GroupSettingsUiState> = _state.asStateFlow()

@@ -1,14 +1,25 @@
 package com.sh7411usa.shliachtzibbur.repo
 
+import com.sh7411usa.shliachtzibbur.core.crypto.AesGcmSeqScheme
+import com.sh7411usa.shliachtzibbur.core.crypto.GroupKey
+import com.sh7411usa.shliachtzibbur.core.crypto.KeyHex
+import com.sh7411usa.shliachtzibbur.core.model.ConversationItem
+import com.sh7411usa.shliachtzibbur.core.model.MessageSecurity
 import com.sh7411usa.shliachtzibbur.core.model.OutboxState
 import com.sh7411usa.shliachtzibbur.core.net.HttpEngine
 import com.sh7411usa.shliachtzibbur.core.net.TzibburApi
 import com.sh7411usa.shliachtzibbur.core.result.ApiResult
 import com.sh7411usa.shliachtzibbur.data.local.entity.GroupEntity
+import com.sh7411usa.shliachtzibbur.data.local.entity.MessageEntity
+import com.sh7411usa.shliachtzibbur.data.prefs.GroupCrypto
+import com.sh7411usa.shliachtzibbur.data.prefs.GroupCryptoSource
+import com.sh7411usa.shliachtzibbur.data.prefs.NoEncryption
 import com.sh7411usa.shliachtzibbur.data.repo.MessageRepository
+import com.sh7411usa.shliachtzibbur.fakes.FakeGroupCryptoSource
 import com.sh7411usa.shliachtzibbur.fakes.FakeGroupDao
 import com.sh7411usa.shliachtzibbur.fakes.FakeMessageDao
 import com.sh7411usa.shliachtzibbur.fakes.FakeOutboxDao
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.Dispatcher
@@ -43,6 +54,7 @@ class MessageRepositoryTest {
                 return when {
                     request.method == "POST" && path.endsWith("/messages") -> {
                         val body = request.body.readUtf8()
+                        lastPostBody = body
                         val cmid = Regex("\"clientMessageId\"\\s*:\\s*\"([^\"]+)\"").find(body)?.groupValues?.get(1).orEmpty()
                         lastClientMessageId = cmid
                         postResponder(cmid)
@@ -69,15 +81,25 @@ class MessageRepositoryTest {
     }
 
     private var lastClientMessageId: String? = null
+    private var lastPostBody: String? = null
 
-    private fun repository(timeoutMs: Long = 5_000L): MessageRepository {
+    private fun repository(
+        timeoutMs: Long = 5_000L,
+        crypto: GroupCryptoSource = NoEncryption,
+        selfUserId: String? = "u1",
+    ): MessageRepository {
         val client = OkHttpClient.Builder()
             .callTimeout(10, TimeUnit.SECONDS)
             .readTimeout(10, TimeUnit.SECONDS)
             .build()
         val api = TzibburApi(HttpEngine(server.url("/").toString(), client))
         groupDao.rows.value = listOf(group("g1"))
-        return MessageRepository(api, messageDao, outboxDao, groupDao, sendTimeoutMs = timeoutMs)
+        return MessageRepository(
+            api, messageDao, outboxDao, groupDao,
+            crypto = crypto,
+            selfUserId = { selfUserId },
+            sendTimeoutMs = timeoutMs,
+        )
     }
 
     @Test
@@ -145,6 +167,65 @@ class MessageRepositoryTest {
         repo.deleteOutbox(cmid)
 
         assertNull(outboxDao.find(cmid))
+    }
+
+    @Test
+    fun `encrypted group sends ciphertext, not plaintext`() = runBlocking {
+        postResponder = { json("""{"ok":true}""") }
+        val hex = KeyHex.generate()
+        val crypto = FakeGroupCryptoSource(
+            GroupCrypto(enabled = true, keys = listOf(GroupKey("k", hex, "k", 0)), activeKeyId = "k"),
+        )
+        val repo = repository(crypto = crypto)
+
+        repo.send("g1", "hello secret")
+
+        assertTrue("body carries the \$E1 token", lastPostBody!!.contains("\$E1:"))
+        assertTrue("plaintext is not on the wire", !lastPostBody!!.contains("hello secret"))
+    }
+
+    @Test
+    fun `locked encrypted group refuses to send`() = runBlocking {
+        val crypto = FakeGroupCryptoSource(GroupCrypto(enabled = true))
+        val repo = repository(crypto = crypto)
+
+        val result = repo.send("g1", "hi")
+
+        assertTrue(result is ApiResult.Failure)
+    }
+
+    @Test
+    fun `incoming ciphertext decrypts to Secure`() = runBlocking {
+        val hex = KeyHex.generate()
+        val crypto = FakeGroupCryptoSource(
+            GroupCrypto(enabled = true, keys = listOf(GroupKey("k", hex, "k", 0)), activeKeyId = "k"),
+        )
+        val token = AesGcmSeqScheme.encrypt(hex, 4, "u2", "hi there")
+        messageDao.rows.value = listOf(
+            MessageEntity("m1", "g1", 4, "u2", "Bob: $token", null, null),
+        )
+        val repo = repository(crypto = crypto)
+
+        val delivered = repo.conversation("g1").first()
+            .filterIsInstance<ConversationItem.Delivered>().single()
+
+        assertEquals(MessageSecurity.Secure, delivered.security)
+        assertEquals("hi there", delivered.plaintext)
+        assertEquals("hi there", delivered.displayText)
+    }
+
+    @Test
+    fun `plaintext in an enabled group is flagged Insecure`() = runBlocking {
+        val crypto = FakeGroupCryptoSource(GroupCrypto(enabled = true, enabledSinceSeq = 1))
+        messageDao.rows.value = listOf(
+            MessageEntity("m2", "g1", 5, "u2", "Bob: plain talk", null, null),
+        )
+        val repo = repository(crypto = crypto)
+
+        val delivered = repo.conversation("g1").first()
+            .filterIsInstance<ConversationItem.Delivered>().single()
+
+        assertEquals(MessageSecurity.Insecure, delivered.security)
     }
 
     // --- helpers ---

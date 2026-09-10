@@ -6,6 +6,43 @@ stays in sync with `app/build.gradle.kts`.
 
 ---
 
+## 0.11 — versionCode 12 — 2026-09-10
+
+Group encryption (`$E1` — AES-256-GCM, client-side shared key).
+
+- **Turn it on** at group creation or later, from **Group settings → Encryption**.
+  Only admins can toggle it or change the group key (enforced in the UI).
+- **Keys** are 64-hex-char AES-256 keys, shared out of band. The Encryption
+  screen lists all keys (current + old), and anyone can add/delete keys locally
+  (with a "you may lose the ability to read messages" warning). Admins can
+  **generate** a new group key or mark a key as the send key.
+- **Service messages**: enabling / disabling / re-keying posts a plain message
+  that Shliach Tzibbur shows as a small grey tag ("X turned on encryption");
+  other clients see a readable sentence linking
+  `github.com/sh7411usa/ShliachTzibbur`. Kept well under the 1000-char limit.
+- **Reading**: opening an encrypted group prompts for the key if the newest
+  encrypted message can't be opened. Older messages the current key can't open
+  are tried against every known key, then marked **not decryptable** — tapping
+  that badge lets you paste more keys and retries them all.
+- **Sending**: plaintext can't be sent to an encrypted group. A plaintext
+  message from another client is shown with an **insecure** badge; decrypted
+  messages get a small **lock** badge and a **View original** menu item.
+- Crypto: `"$E1:" + base64(AES-256-GCM(ct||tag))`, plaintext wrapped as
+  `"!" + text`. Nonce = `SHA-256("STZ/E1 " + seq + " " + senderId)[:12]`,
+  derived from the *anticipated* seq; the receiver searches ±3 seq offsets and
+  all keys. New dependency-free `core/crypto` package; keys in a private
+  DataStore (`EncryptionStore`), same posture as the auth token.
+- Encrypted-group message length limit is lower (~720 chars) to fit the
+  ciphertext in the 1000-char body; the composer counter reflects it.
+
+### Known limitations
+- No key exchange — keys are distributed entirely out of band.
+- GCM nonce is deterministic from (seq, sender); the same sender racing two
+  offline sends at the same anticipated seq can reuse a nonce (mitigated by
+  spacing anticipated seqs across the outbox).
+- No forward secrecy / ratcheting — one static shared key at a time.
+- Search across an encrypted group only matches messages a local key can open.
+
 ## 0.10 — versionCode 11 — 2026-09-10
 
 Emoji reactions, plus composer polish.

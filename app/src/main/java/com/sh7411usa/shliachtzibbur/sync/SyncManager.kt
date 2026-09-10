@@ -1,6 +1,7 @@
 package com.sh7411usa.shliachtzibbur.sync
 
 import com.sh7411usa.shliachtzibbur.core.model.Message
+import com.sh7411usa.shliachtzibbur.core.model.ServiceMessage
 import com.sh7411usa.shliachtzibbur.core.net.TzibburApi
 import com.sh7411usa.shliachtzibbur.core.net.dto.PendingGroupDto
 import com.sh7411usa.shliachtzibbur.core.net.dto.toDomain
@@ -66,7 +67,15 @@ class SyncManager(
 
         if (shouldNotify) {
             val groupName = groupDao.find(groupId)?.name ?: return ackQuietly(groupId, maxSeq)
-            notifications.notifyNewMessages(groupId, groupName, messages, selfId)
+            val notifiable = messages.filter { ServiceMessage.parse(it.text) == null }
+            if (notifiable.isNotEmpty()) {
+                notifications.notifyNewMessages(
+                    groupId,
+                    groupName,
+                    messageRepository.decryptedForDisplay(groupId, notifiable),
+                    selfId,
+                )
+            }
         }
 
         // 3. Ack (advances the device's deliveredSeq; enables live pushes).

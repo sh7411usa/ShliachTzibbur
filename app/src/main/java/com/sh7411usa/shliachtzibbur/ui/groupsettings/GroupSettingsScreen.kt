@@ -50,11 +50,13 @@ import com.sh7411usa.shliachtzibbur.ui.common.toUserMessage
 fun GroupSettingsScreen(
     onBack: () -> Unit,
     onOpenMembers: (String) -> Unit,
+    onOpenEncryption: (String) -> Unit,
     onLeftOrDeleted: () -> Unit,
     viewModel: GroupSettingsViewModel = viewModel(factory = AppViewModelFactory.Factory),
 ) {
     val group by viewModel.group.collectAsStateWithLifecycle()
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val encrypted by viewModel.encryptionEnabled.collectAsStateWithLifecycle()
 
     LaunchedEffect(state.left, state.deleted) {
         if (state.left || state.deleted) onLeftOrDeleted()
@@ -177,6 +179,19 @@ fun GroupSettingsScreen(
                     Text(
                         stringResource(R.string.group_settings_members) +
                             "  ·  " + (group?.memberCount ?: 0),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                TextButton(
+                    onClick = { onOpenEncryption(viewModel.groupId) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp),
+                ) {
+                    Text(
+                        stringResource(R.string.enc_section) + "  ·  " + stringResource(
+                            if (encrypted) R.string.enc_state_on else R.string.enc_state_off,
+                        ),
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }

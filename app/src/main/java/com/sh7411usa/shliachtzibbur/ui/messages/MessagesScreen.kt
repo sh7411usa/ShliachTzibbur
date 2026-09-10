@@ -39,9 +39,11 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -50,6 +52,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -71,8 +74,10 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -81,7 +86,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sh7411usa.shliachtzibbur.R
 import com.sh7411usa.shliachtzibbur.core.model.ConversationItem
 import com.sh7411usa.shliachtzibbur.core.model.GroupKind
+import com.sh7411usa.shliachtzibbur.core.model.MessageSecurity
 import com.sh7411usa.shliachtzibbur.core.model.OutboxState
+import com.sh7411usa.shliachtzibbur.core.model.ServiceMessage
 import com.sh7411usa.shliachtzibbur.core.model.WhoCanPost
 import com.sh7411usa.shliachtzibbur.core.util.Reactions
 import com.sh7411usa.shliachtzibbur.core.util.ReplyToken
@@ -104,8 +111,14 @@ fun MessagesScreen(
     val selfId by viewModel.selfUserId.collectAsStateWithLifecycle()
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     val threadQuery by viewModel.threadQuery.collectAsStateWithLifecycle()
+    val lockState by viewModel.lockState.collectAsStateWithLifecycle()
+    val groupCrypto by viewModel.groupCrypto.collectAsStateWithLifecycle()
+    val maxMessageChars by viewModel.maxMessageChars.collectAsStateWithLifecycle()
     var searchOpen by rememberSaveable { mutableStateOf(false) }
     var replyToSeq by rememberSaveable { mutableStateOf<Long?>(null) }
+    var showPasteKey by rememberSaveable { mutableStateOf(false) }
+
+    val locked = lockState == LockState.NeedsKey
 
     val listState = rememberLazyListState()
 
@@ -120,7 +133,7 @@ fun MessagesScreen(
             .associateBy { it.message.seq }
     }
     fun quotedFor(seq: Long): QuotedRef =
-        deliveredBySeq[seq]?.message?.let { QuotedRef(seq, it.displayName, ReplyToken.strip(it.text)) }
+        deliveredBySeq[seq]?.let { QuotedRef(seq, it.message.displayName, ReplyToken.strip(it.displayText)) }
             ?: QuotedRef(seq, null, null)
 
     // Scroll to the newest message only when the tail changes (a new message),
@@ -140,6 +153,7 @@ fun MessagesScreen(
         isSystem -> stringResource(R.string.messages_system_readonly)
         memberCount < minToPost -> stringResource(R.string.messages_too_small, minToPost)
         whoCanPost == WhoCanPost.ADMINS && !currentIsAdmin -> stringResource(R.string.messages_cannot_post)
+        groupCrypto.enabled && groupCrypto.activeKey == null -> stringResource(R.string.enc_error_locked)
         else -> null
     }
 
@@ -200,17 +214,31 @@ fun MessagesScreen(
             )
         },
         bottomBar = {
-            MessageInputBar(
-                enabled = postBlockedReason == null,
-                blockedReason = postBlockedReason,
-                sending = state.sending,
-                maxLength = group?.limits?.messageMaxLength ?: 1000,
-                replyingTo = replyToSeq?.let { quotedFor(it) },
-                onCancelReply = { replyToSeq = null },
-                onSend = viewModel::send,
-            )
+            if (!locked) {
+                MessageInputBar(
+                    enabled = postBlockedReason == null,
+                    blockedReason = postBlockedReason,
+                    sending = state.sending,
+                    maxLength = maxMessageChars,
+                    encrypted = groupCrypto.enabled && groupCrypto.activeKey != null,
+                    replyingTo = replyToSeq?.let { quotedFor(it) },
+                    onCancelReply = { replyToSeq = null },
+                    onSend = viewModel::send,
+                )
+            }
         },
     ) { padding ->
+        if (locked) {
+            EncryptionLockPanel(
+                rejected = state.keyRejected,
+                onSubmitKey = { viewModel.submitKey(it) },
+                onClearRejected = viewModel::clearKeyRejected,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+            )
+            return@Scaffold
+        }
         Column(
             Modifier
                 .fillMaxSize()
@@ -252,23 +280,35 @@ fun MessagesScreen(
                     items(visibleItems, key = { it.key() }) { item ->
                         when (item) {
                             is ConversationItem.Delivered -> {
-                                val reply = remember(item.message.text) {
-                                    ReplyToken.parse(item.message.text)
+                                val serviceKind = remember(item.displayText) {
+                                    ServiceMessage.parse(item.displayText)
                                 }
-                                MessageBubble(
-                                    text = reply?.body ?: item.message.text,
-                                    quoted = reply?.let { quotedFor(it.seq) },
-                                    seq = item.message.seq,
-                                    sender = item.message.displayName,
-                                    isSelf = item.message.senderId == selfId,
-                                    isSystem = isSystem,
-                                    markdown = settings.messagesMarkdown && !isSystem,
-                                    showSeq = settings.showMessageSeq,
-                                    canReply = postBlockedReason == null,
-                                    reactions = reactionsBySeq[item.message.seq].orEmpty(),
-                                    onReply = { replyToSeq = item.message.seq },
-                                    onReact = { emoji -> viewModel.react(item.message.seq, emoji) },
-                                )
+                                if (serviceKind != null) {
+                                    ServiceTag(serviceKind, item.message.displayName)
+                                } else {
+                                    val body = item.displayText
+                                    val reply = remember(body) { ReplyToken.parse(body) }
+                                    MessageBubble(
+                                        text = reply?.body ?: body,
+                                        quoted = reply?.let { quotedFor(it.seq) },
+                                        seq = item.message.seq,
+                                        sender = item.message.displayName,
+                                        isSelf = item.message.senderId == selfId,
+                                        isSystem = isSystem,
+                                        markdown = settings.messagesMarkdown && !isSystem,
+                                        showSeq = settings.showMessageSeq,
+                                        canReply = postBlockedReason == null,
+                                        security = item.security,
+                                        original = item.message.text.takeIf {
+                                            item.security == MessageSecurity.Secure ||
+                                                item.security == MessageSecurity.Undecryptable
+                                        },
+                                        reactions = reactionsBySeq[item.message.seq].orEmpty(),
+                                        onReply = { replyToSeq = item.message.seq },
+                                        onReact = { emoji -> viewModel.react(item.message.seq, emoji) },
+                                        onRequestKey = { showPasteKey = true },
+                                    )
+                                }
                             }
 
                             is ConversationItem.Pending -> PendingBubble(
@@ -283,11 +323,154 @@ fun MessagesScreen(
             }
         }
     }
+
+    if (showPasteKey) {
+        KeyPromptDialog(
+            title = stringResource(R.string.enc_paste_key_title),
+            rejected = state.keyRejected,
+            onSubmit = { viewModel.submitKey(it) },
+            onDismiss = { showPasteKey = false; viewModel.clearKeyRejected() },
+        )
+    }
 }
 
 private fun ConversationItem.key(): String = when (this) {
     is ConversationItem.Delivered -> "d-${message.id}"
     is ConversationItem.Pending -> "p-${outbox.clientMessageId}"
+}
+
+/** Centered grey tag for an in-band encryption service message. */
+@Composable
+private fun ServiceTag(kind: ServiceMessage, actor: String?) {
+    val text = when (kind) {
+        ServiceMessage.EncryptionOn ->
+            if (actor != null) stringResource(R.string.enc_tag_enabled, actor)
+            else stringResource(R.string.enc_tag_enabled_generic)
+        ServiceMessage.EncryptionOff ->
+            if (actor != null) stringResource(R.string.enc_tag_disabled, actor)
+            else stringResource(R.string.enc_tag_disabled_generic)
+        ServiceMessage.KeyChanged ->
+            if (actor != null) stringResource(R.string.enc_tag_key_changed, actor)
+            else stringResource(R.string.enc_tag_key_changed_generic)
+    }
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            Icons.Filled.Lock,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(14.dp),
+        )
+        Text(
+            text,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(start = 6.dp),
+        )
+    }
+}
+
+/** Full-screen gate shown when an encrypted group can't be read with the known keys. */
+@Composable
+private fun EncryptionLockPanel(
+    rejected: Boolean,
+    onSubmitKey: (String) -> Unit,
+    onClearRejected: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var hex by rememberSaveable { mutableStateOf("") }
+    Column(
+        modifier
+            .padding(24.dp)
+            .verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Icon(
+            Icons.Filled.Lock,
+            contentDescription = null,
+            modifier = Modifier.size(40.dp),
+            tint = MaterialTheme.colorScheme.primary,
+        )
+        Text(
+            stringResource(R.string.enc_lock_title),
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(top = 12.dp),
+        )
+        Text(
+            stringResource(R.string.enc_lock_body),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = 8.dp),
+        )
+        OutlinedTextField(
+            value = hex,
+            onValueChange = { hex = it.trim(); if (rejected) onClearRejected() },
+            singleLine = true,
+            isError = rejected,
+            placeholder = { Text(stringResource(R.string.enc_lock_hint)) },
+            supportingText = if (rejected) {
+                { Text(stringResource(R.string.enc_key_wrong)) }
+            } else {
+                null
+            },
+            textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
+            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.None),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 16.dp),
+        )
+        TextButton(
+            onClick = { onSubmitKey(hex) },
+            enabled = hex.isNotBlank(),
+            modifier = Modifier.padding(top = 8.dp),
+        ) { Text(stringResource(R.string.enc_unlock)) }
+    }
+}
+
+/** Small dialog to paste another key when a message won't decrypt. */
+@Composable
+private fun KeyPromptDialog(
+    title: String,
+    rejected: Boolean,
+    onSubmit: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var hex by rememberSaveable { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            OutlinedTextField(
+                value = hex,
+                onValueChange = { hex = it.trim() },
+                singleLine = true,
+                isError = rejected,
+                placeholder = { Text(stringResource(R.string.enc_lock_hint)) },
+                supportingText = if (rejected) {
+                    { Text(stringResource(R.string.enc_key_wrong)) }
+                } else {
+                    null
+                },
+                textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.None),
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = { onSubmit(hex); hex = "" }, enabled = hex.isNotBlank()) {
+                Text(stringResource(R.string.action_add))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close)) }
+        },
+    )
 }
 
 /** One emoji reaction shown on the message it targets. */
@@ -323,8 +506,8 @@ private fun splitReactions(raw: List<ConversationItem>): SplitConversation {
     for (item in raw) {
         when (item) {
             is ConversationItem.Delivered -> {
-                val target = Reactions.targetOf(item.message.text)
-                val emoji = Reactions.of(item.message.text)
+                val target = Reactions.targetOf(item.displayText)
+                val emoji = Reactions.of(item.displayText)
                 if (target != null && emoji != null) {
                     add(
                         target,
@@ -400,14 +583,18 @@ private fun MessageBubble(
     markdown: Boolean,
     showSeq: Boolean,
     canReply: Boolean,
+    security: MessageSecurity,
+    original: String?,
     reactions: List<Reaction>,
     onReply: () -> Unit,
     onReact: (String) -> Unit,
+    onRequestKey: () -> Unit,
 ) {
     val clipboard = LocalClipboardManager.current
     val isTouch = rememberIsTouchDevice()
     var menuOpen by remember { mutableStateOf(false) }
     var showEmojiPicker by remember { mutableStateOf(false) }
+    var showOriginal by remember { mutableStateOf(false) }
 
     if (isSystem) {
         MessageText(
@@ -463,7 +650,16 @@ private fun MessageBubble(
                 if (quoted != null) {
                     QuotedPreview(quoted, onBubble)
                 }
-                MessageText(text = text, markdown = markdown, color = onBubble)
+                if (security == MessageSecurity.Undecryptable) {
+                    Text(
+                        stringResource(R.string.enc_undecryptable_body),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = onBubble.copy(alpha = 0.7f),
+                    )
+                } else {
+                    MessageText(text = text, markdown = markdown, color = onBubble)
+                }
+                SecurityBadge(security = security, onBubble = onBubble, onTap = onRequestKey)
             }
             DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                 if (canReply) {
@@ -493,11 +689,43 @@ private fun MessageBubble(
                         menuOpen = false
                     },
                 )
+                if (original != null) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.enc_view_original)) },
+                        onClick = {
+                            menuOpen = false
+                            showOriginal = true
+                        },
+                    )
+                }
             }
         }
         if (reactions.isNotEmpty()) {
             ReactionBar(reactions = reactions, alignEnd = isSelf)
         }
+    }
+
+    if (showOriginal && original != null) {
+        AlertDialog(
+            onDismissRequest = { showOriginal = false },
+            title = { Text(stringResource(R.string.enc_original_title)) },
+            text = {
+                Text(
+                    original,
+                    style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    clipboard.setText(AnnotatedString(original))
+                    showOriginal = false
+                }) { Text(stringResource(R.string.action_copy)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showOriginal = false }) { Text(stringResource(R.string.action_close)) }
+            },
+        )
     }
 
     if (showEmojiPicker) {
@@ -649,6 +877,63 @@ private fun ReactionBar(reactions: List<Reaction>, alignEnd: Boolean) {
     }
 }
 
+/** Small lock/insecure marker under a message body. Undecryptable is tappable. */
+@Composable
+private fun SecurityBadge(security: MessageSecurity, onBubble: Color, onTap: () -> Unit) {
+    when (security) {
+        MessageSecurity.None -> Unit
+        MessageSecurity.Secure -> Row(
+            Modifier.padding(top = 2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                Icons.Filled.Lock,
+                contentDescription = stringResource(R.string.enc_badge_secure),
+                tint = onBubble.copy(alpha = 0.55f),
+                modifier = Modifier.size(12.dp),
+            )
+        }
+        MessageSecurity.Insecure -> Row(
+            Modifier.padding(top = 2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                Icons.Filled.Warning,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.error,
+                modifier = Modifier.size(12.dp),
+            )
+            Text(
+                stringResource(R.string.enc_badge_insecure),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(start = 4.dp),
+            )
+        }
+        MessageSecurity.Undecryptable -> Row(
+            Modifier
+                .padding(top = 4.dp)
+                .focusHighlight(makeFocusable = true)
+                .clickable { onTap() }
+                .padding(2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                Icons.Filled.Lock,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.error,
+                modifier = Modifier.size(12.dp),
+            )
+            Text(
+                stringResource(R.string.enc_badge_undecryptable),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(start = 4.dp),
+            )
+        }
+    }
+}
+
 /** WhatsApp/Telegram-style quoted preview of the message a reply points at. */
 @Composable
 private fun QuotedPreview(quoted: QuotedRef, onBubble: Color) {
@@ -761,6 +1046,7 @@ private fun MessageInputBar(
     blockedReason: String?,
     sending: Boolean,
     maxLength: Int,
+    encrypted: Boolean,
     replyingTo: QuotedRef?,
     onCancelReply: () -> Unit,
     onSend: (String) -> Unit,
@@ -906,6 +1192,16 @@ private fun MessageInputBar(
                             },
                         )
                     }
+                }
+                if (encrypted) {
+                    Icon(
+                        Icons.Filled.Lock,
+                        contentDescription = stringResource(R.string.enc_badge_secure),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier
+                            .padding(end = 2.dp)
+                            .size(16.dp),
+                    )
                 }
                 TextField(
                     value = text,

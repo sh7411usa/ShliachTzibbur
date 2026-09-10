@@ -66,6 +66,16 @@ com.sh7411usa.shliachtzibbur
 │   │   Reactions            an emoji-only ReplyToken reply = a reaction; QUICK /
 │   │                        PALETTE emoji sets + isEmojiOnly detection (JVM-testable)
 │   │
+│   ├── crypto/               Group encryption, dependency-free & JVM-testable:
+│   │   EncryptionScheme      interface (id, tokenPrefix, encrypt, tryDecrypt) — modular
+│   │                        so `$E2` slots in beside `$E1`
+│   │   AesGcmSeqScheme       `$E1`: AES-256-GCM, IV = SHA-256("STZ/E1 "+seq+" "+sender)
+│   │                        [:12]; plaintext wrapped as `"!"+text`; token = base64(ct||tag)
+│   │   MessageCrypto         scheme registry; decrypt() searches ±3 seq offsets × all
+│   │                        keys -> CryptoOutcome (Plain / Decrypted / Undecryptable)
+│   │   GroupKey / KeyHex     64-hex AES-256 key model + validate / generate / toBytes
+│   │   Base64Codec           inline RFC 4648 base64 (no android.util.Base64)
+│   │
 │   └── net/
 │       NetJson              shared kotlinx.serialization Json (lenient, tolerant)
 │       NetworkFactory       builds the one shared OkHttpClient + HttpEngine
@@ -98,7 +108,11 @@ com.sh7411usa.shliachtzibbur
 │   │   SessionStore         token + userId + deviceId (Flow<Session?>)
 │   │   SettingsStore        AppSettings: themeMode, languageTag, notificationsEnabled,
 │   │                        syncServiceEnabled, mutedGroupIds (mute is local — the API
-│   │                        has no endpoint to persist it), lastPhoneE164 (login prefill)
+│   │                        has no endpoint to persist it), lastPhoneE164 (login prefill),
+│   │                        messagesMarkdown, showMessageSeq
+│   │   EncryptionStore      per-group GroupCrypto (enabled, enabledSinceSeq, keys,
+│   │                        activeKeyId) as JSON; implements GroupCryptoSource (the
+│   │                        interface repo/VMs/tests depend on; NoEncryption = no-op)
 │   │
 │   └── repo/                Repositories: network + Room + DataStore, expose Flows,
 │                            return ApiResult (never throw)
@@ -171,21 +185,27 @@ com.sh7411usa.shliachtzibbur
                              optional memberPhone arg adds a contact after creation),
                              categoryLabel
     messages/                MessagesViewModel (group + conversation + self id +
-                             settings + thread search; starts a WebSocket session
+                             settings + thread search + encryption lock state /
+                             submitKey / maxMessageChars; starts a WebSocket session
                              while open; send/react/retry/deleteFailed/loadOlder;
                              confirm-sweep + 5s poll; marks read) + MessagesScreen
                              (MessageText bubbles, optional #seq, long-press /
                              D-pad-centre menu: quick-emoji row + chooser / Reply /
-                             Copy; quoted-reply preview in the bubble; emoji
-                             reactions split from the stream and shown as
-                             collapsible badges on their target message; attach
-                             contact/location; in-thread search; input bar with
-                             reply strip + char counter + IME-Send + insets)
+                             Copy / View original; quoted-reply preview; emoji
+                             reactions split from the stream into collapsible
+                             badges; secure / insecure / undecryptable badges +
+                             ServiceTag rows; EncryptionLockPanel gate + paste-key
+                             dialog; attach contact/location; in-thread search;
+                             input bar with reply strip + char counter + IME-Send)
     groupsettings/           AddMembersViewModel + AddMembersScreen (searchable contact
                              multi-select picker + type-a-number; already-members
                              disabled), plus
                              GroupSettingsViewModel + GroupSettingsScreen (name,
-                             whoCanPost/whoCanAddMembers, mute, leave, delete),
+                             whoCanPost/whoCanAddMembers, mute, encryption row,
+                             leave, delete),
+                             GroupEncryptionViewModel + GroupEncryptionScreen
+                             (admin-gated on/off toggle + service message, key
+                             list with add/delete/use, generate new group key),
                              MembersViewModel + MembersScreen (+ add-members dialog,
                              promote/demote/remove)
     usersettings/            UserSettingsViewModel + UserSettingsScreen (display name,
@@ -264,6 +284,8 @@ DayNight base), core-splashscreen, material-icons-core.
 Non-Jetpack: OkHttp (HTTP **and** WebSocket — no usable WebSocket client at
 `minSdk 24`), kotlinx-serialization-json, kotlinx-coroutines, desugar_jdk_libs
 (java.time on API 24).
+Group encryption uses only the platform `javax.crypto` (AES/GCM, API 19+) +
+`java.security` (SecureRandom, SHA-256) — no crypto library, no new dependency.
 
 ---
 

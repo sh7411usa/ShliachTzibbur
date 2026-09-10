@@ -14,6 +14,7 @@ import com.sh7411usa.shliachtzibbur.ui.contacts.ContactsViewModel
 import com.sh7411usa.shliachtzibbur.ui.groups.CreateGroupViewModel
 import com.sh7411usa.shliachtzibbur.ui.groups.GroupsViewModel
 import com.sh7411usa.shliachtzibbur.ui.groupsettings.AddMembersViewModel
+import com.sh7411usa.shliachtzibbur.ui.groupsettings.GroupEncryptionViewModel
 import com.sh7411usa.shliachtzibbur.ui.groupsettings.GroupSettingsViewModel
 import com.sh7411usa.shliachtzibbur.ui.groupsettings.MembersViewModel
 import com.sh7411usa.shliachtzibbur.ui.messages.MessagesViewModel
@@ -54,6 +55,8 @@ object AppViewModelFactory {
                 savedStateHandle = createSavedStateHandle(),
                 groupRepository = container.groupRepository,
                 memberRepository = container.memberRepository,
+                messageRepository = container.messageRepository,
+                crypto = container.encryptionStore,
             )
         }
         initializer {
@@ -72,12 +75,22 @@ object AppViewModelFactory {
                 syncManager = container.syncManager,
                 sessionStore = container.sessionStore,
                 settingsStore = container.settingsStore,
+                crypto = container.encryptionStore,
             )
         }
         initializer {
             GroupSettingsViewModel(
                 savedStateHandle = createSavedStateHandle(),
                 groupRepository = container.groupRepository,
+                cryptoStore = container.encryptionStore,
+            )
+        }
+        initializer {
+            GroupEncryptionViewModel(
+                savedStateHandle = createSavedStateHandle(),
+                groupRepository = container.groupRepository,
+                messageRepository = container.messageRepository,
+                cryptoStore = container.encryptionStore,
             )
         }
         initializer {

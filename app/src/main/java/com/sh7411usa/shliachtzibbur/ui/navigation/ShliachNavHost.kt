@@ -27,6 +27,7 @@ import com.sh7411usa.shliachtzibbur.ui.contacts.ContactsScreen
 import com.sh7411usa.shliachtzibbur.ui.groups.CreateGroupScreen
 import com.sh7411usa.shliachtzibbur.ui.groups.GroupsScreen
 import com.sh7411usa.shliachtzibbur.ui.groupsettings.AddMembersScreen
+import com.sh7411usa.shliachtzibbur.ui.groupsettings.GroupEncryptionScreen
 import com.sh7411usa.shliachtzibbur.ui.groupsettings.GroupSettingsScreen
 import com.sh7411usa.shliachtzibbur.ui.groupsettings.MembersScreen
 import com.sh7411usa.shliachtzibbur.ui.messages.MessagesScreen
@@ -174,8 +175,15 @@ private fun NavGraphBuilder.mainGraph(navController: NavHostController) {
             GroupSettingsScreen(
                 onBack = { navController.popBackStack() },
                 onOpenMembers = { id -> navController.navigate(Routes.members(id)) },
+                onOpenEncryption = { id -> navController.navigate(Routes.groupEncryption(id)) },
                 onLeftOrDeleted = { navController.popBackStack(Routes.GROUPS, inclusive = false) },
             )
+        }
+        composable(
+            route = Routes.GROUP_ENCRYPTION,
+            arguments = listOf(navArgument("groupId") { type = NavType.StringType }),
+        ) {
+            GroupEncryptionScreen(onBack = { navController.popBackStack() })
         }
         composable(
             route = Routes.MEMBERS,

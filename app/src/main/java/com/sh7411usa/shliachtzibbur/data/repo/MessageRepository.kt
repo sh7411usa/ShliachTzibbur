@@ -1,8 +1,12 @@
 package com.sh7411usa.shliachtzibbur.data.repo
 
+import com.sh7411usa.shliachtzibbur.core.crypto.CryptoOutcome
+import com.sh7411usa.shliachtzibbur.core.crypto.MessageCrypto
 import com.sh7411usa.shliachtzibbur.core.model.ConversationItem
 import com.sh7411usa.shliachtzibbur.core.model.Message
+import com.sh7411usa.shliachtzibbur.core.model.MessageSecurity
 import com.sh7411usa.shliachtzibbur.core.model.OutboxState
+import com.sh7411usa.shliachtzibbur.core.model.ServiceMessage
 import com.sh7411usa.shliachtzibbur.core.net.TzibburApi
 import com.sh7411usa.shliachtzibbur.core.result.ApiException
 import com.sh7411usa.shliachtzibbur.core.result.ApiResult
@@ -17,8 +21,12 @@ import com.sh7411usa.shliachtzibbur.data.local.dao.OutboxDao
 import com.sh7411usa.shliachtzibbur.data.local.entity.OutboxEntity
 import com.sh7411usa.shliachtzibbur.data.local.entity.toDomain
 import com.sh7411usa.shliachtzibbur.data.local.entity.toEntity
+import com.sh7411usa.shliachtzibbur.data.prefs.GroupCrypto
+import com.sh7411usa.shliachtzibbur.data.prefs.GroupCryptoSource
+import com.sh7411usa.shliachtzibbur.data.prefs.NoEncryption
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
@@ -35,6 +43,8 @@ class MessageRepository(
     private val messageDao: MessageDao,
     private val outboxDao: OutboxDao,
     private val groupDao: GroupDao,
+    private val crypto: GroupCryptoSource = NoEncryption,
+    private val selfUserId: suspend () -> String? = { null },
     /** A send that is neither confirmed nor rejected within this window is marked FAILED. */
     private val sendTimeoutMs: Long = 20_000L,
 ) {
@@ -44,14 +54,34 @@ class MessageRepository(
         combine(
             messageDao.observeForGroup(groupId),
             outboxDao.observeForGroup(groupId),
-        ) { messages, outbox ->
+            crypto.crypto(groupId),
+        ) { messages, outbox, groupCrypto ->
             val deliveredClientIds = messages.mapNotNull { it.clientMessageId }.toSet()
-            val delivered = messages.map { ConversationItem.Delivered(it.toDomain()) }
+            val delivered = messages.map { entity ->
+                val message = entity.toDomain()
+                val (security, plaintext) = classify(message, groupCrypto)
+                ConversationItem.Delivered(message, security, plaintext)
+            }
             val pending = outbox
                 .filter { it.clientMessageId !in deliveredClientIds }
                 .map { ConversationItem.Pending(it.toDomain()) }
             delivered + pending
         }
+
+    /** Decryption outcome + security label for one stored message. */
+    private fun classify(message: Message, gc: GroupCrypto): Pair<MessageSecurity, String?> {
+        if (ServiceMessage.parse(message.text) != null) return MessageSecurity.None to null
+        return when (val outcome = MessageCrypto.decrypt(message.text, message.seq, message.senderId, gc.keysForDecrypt)) {
+            is CryptoOutcome.Decrypted -> MessageSecurity.Secure to outcome.plaintext
+            CryptoOutcome.Undecryptable -> MessageSecurity.Undecryptable to null
+            CryptoOutcome.Plain ->
+                if (gc.enabled && message.seq >= gc.enabledSinceSeq && gc.enabledSinceSeq > 0) {
+                    MessageSecurity.Insecure to null
+                } else {
+                    MessageSecurity.None to null
+                }
+        }
+    }
 
     fun unreadCount(groupId: String, afterSeq: Long): Flow<Int> =
         messageDao.observeUnreadCount(groupId, afterSeq)
@@ -89,18 +119,33 @@ class MessageRepository(
                 ApiException(ErrorType.INVALID_MESSAGE, status = 0, detail = "Empty message"),
             )
         }
+        // An encrypted group with no key on this device must not leak plaintext.
+        val gc = crypto.crypto(groupId).first()
+        if (gc.enabled && gc.activeKey == null && ServiceMessage.parse(trimmed) == null) {
+            return ApiResult.Failure(
+                ApiException(ErrorType.ENCRYPTION_LOCKED, status = 0, detail = "No encryption key"),
+            )
+        }
+        return enqueue(groupId, trimmed)
+    }
+
+    /** Send an in-band coordination message (encryption on/off, key changed). Always plaintext. */
+    suspend fun sendServiceMessage(groupId: String, kind: ServiceMessage): ApiResult<Unit> =
+        enqueue(groupId, ServiceMessage.body(kind))
+
+    private suspend fun enqueue(groupId: String, text: String): ApiResult<Unit> {
         val clientMessageId = Ids.newUuid()
         outboxDao.upsert(
             OutboxEntity(
                 clientMessageId = clientMessageId,
                 groupId = groupId,
-                text = trimmed,
+                text = text,
                 state = OutboxState.SENDING.name,
                 createdAtMillis = System.currentTimeMillis(),
                 lastError = null,
             ),
         )
-        return deliver(groupId, clientMessageId, trimmed)
+        return deliver(groupId, clientMessageId, text)
     }
 
     suspend fun retry(clientMessageId: String): ApiResult<Unit> {
@@ -151,9 +196,10 @@ class MessageRepository(
         clientMessageId: String,
         text: String,
     ): ApiResult<Unit> {
-        Log.d("Sending message group=$groupId cmid=$clientMessageId len=${text.length}")
+        val wireBody = encryptForSend(groupId, clientMessageId, text)
+        Log.d("Sending message group=$groupId cmid=$clientMessageId len=${wireBody.length} enc=${wireBody !== text}")
         val outcome = withTimeoutOrNull(sendTimeoutMs) {
-            when (val result = apiCatching { api.sendMessage(groupId, clientMessageId, text) }) {
+            when (val result = apiCatching { api.sendMessage(groupId, clientMessageId, wireBody) }) {
                 is ApiResult.Success -> {
                     result.value?.let { persist(groupId, listOf(it)) }
                     // Pull the server's copy so the message (carrying our
@@ -197,6 +243,25 @@ class MessageRepository(
         }
     }
 
+    /**
+     * Returns the body to actually put on the wire: the ciphertext when the group
+     * is encrypted and a key is available, otherwise [text] unchanged (referential
+     * equality signals "not encrypted" to the caller's log line).
+     */
+    private suspend fun encryptForSend(groupId: String, clientMessageId: String, text: String): String {
+        if (ServiceMessage.parse(text) != null || MessageCrypto.isCipherText(text)) return text
+        val gc = crypto.crypto(groupId).first()
+        val key = gc.activeKey?.takeIf { gc.enabled } ?: return text
+        // The server assigns the real seq; anticipate it and let the receiver's
+        // ±seq search close the gap. Space concurrent outbox rows apart to avoid
+        // the same sender reusing a nonce.
+        val ahead = outboxDao.forGroup(groupId).count {
+            it.clientMessageId != clientMessageId && it.state != OutboxState.FAILED.name
+        }
+        val anticipatedSeq = (messageDao.maxSeq(groupId) ?: 0L) + 1 + ahead
+        return MessageCrypto.encrypt(text, anticipatedSeq, selfUserId(), key)
+    }
+
     /** Store incoming messages. Safe to call from sync paths; does not ack. */
     suspend fun applyIncoming(groupId: String, messages: List<Message>) {
         persist(groupId, messages)
@@ -207,25 +272,62 @@ class MessageRepository(
         val distinct = messages.distinctBy { it.id }.filter { it.groupId == groupId || it.groupId.isBlank() }
         messageDao.upsert(distinct.map { it.copy(groupId = groupId).toEntity() })
         distinct.mapNotNull { it.clientMessageId }.forEach { outboxDao.delete(it) }
-        // Emoji reactions are shown on the message they react to, not as their own
-        // row, so they must not become a group's "last message" or bump its unread
-        // count. Fall back to the real message they follow.
+
+        // Learn the group's encryption state from what arrived.
+        val gc = crypto.crypto(groupId).first()
+        distinct.sortedBy { it.seq }.forEach { m ->
+            when {
+                ServiceMessage.parse(m.text) == ServiceMessage.EncryptionOn ->
+                    crypto.setEnabled(groupId, true, sinceSeq = m.seq)
+                ServiceMessage.parse(m.text) == ServiceMessage.EncryptionOff ->
+                    crypto.setEnabled(groupId, false)
+                MessageCrypto.isCipherText(m.text) && !gc.enabled ->
+                    crypto.setEnabled(groupId, true, sinceSeq = m.seq)
+                else -> Unit
+            }
+        }
+
+        // Reactions and service messages are shown differently, not as their own
+        // row, so they must not become a group's "last message" or bump unread.
         val newest = distinct
-            .filter { Reactions.of(it.text) == null }
+            .filter { Reactions.of(it.text) == null && ServiceMessage.parse(it.text) == null }
             .maxByOrNull { it.seq } ?: return
+        val gcNow = crypto.crypto(groupId).first()
+        val preview = when (
+            val outcome = MessageCrypto.decrypt(newest.text, newest.seq, newest.senderId, gcNow.keysForDecrypt)
+        ) {
+            is CryptoOutcome.Decrypted -> outcome.plaintext.take(140)
+            CryptoOutcome.Undecryptable -> ENCRYPTED_PREVIEW
+            CryptoOutcome.Plain -> newest.text.take(140)
+        }
         groupDao.updateLastMessage(
             id = groupId,
             seq = newest.seq,
-            preview = newest.text.take(140),
+            preview = preview,
             createdAt = newest.createdAt,
         )
     }
 
-    /** Full-text-ish search across every cached message (case-insensitive LIKE). */
+    /**
+     * Full-text-ish search across every cached message. Encrypted bodies are
+     * decrypted (with the group's local keys) before matching, so search works
+     * inside encrypted groups too; ciphertext that can't be opened is skipped.
+     */
     suspend fun search(query: String): List<Message> {
         val q = query.trim()
         if (q.isBlank()) return emptyList()
-        return messageDao.search(q).map { it.toDomain() }
+        val direct = messageDao.search(q).map { it.toDomain() }
+        val cryptoByGroup = HashMap<String, GroupCrypto>()
+        val fromCipher = messageDao.cipherMessages().mapNotNull { entity ->
+            val message = entity.toDomain()
+            val gc = cryptoByGroup.getOrPut(message.groupId) { crypto.crypto(message.groupId).first() }
+            val plain = (MessageCrypto.decrypt(message.text, message.seq, message.senderId, gc.keysForDecrypt)
+                as? CryptoOutcome.Decrypted)?.plaintext ?: return@mapNotNull null
+            if (!plain.contains(q, ignoreCase = true)) return@mapNotNull null
+            val name = message.displayName
+            message.copy(body = if (name.isNullOrBlank()) plain else "$name: $plain")
+        }
+        return (direct + fromCipher).distinctBy { it.id }
     }
 
     suspend fun markRead(groupId: String, seq: Long) {
@@ -240,7 +342,29 @@ class MessageRepository(
         groupDao.advanceDeliveredSeq(groupId, seq)
     }
 
+    /**
+     * For notifications: returns copies of [messages] with encrypted bodies
+     * replaced by their plaintext (or a lock placeholder when no key opens them).
+     * Service messages and plaintext pass through unchanged.
+     */
+    suspend fun decryptedForDisplay(groupId: String, messages: List<Message>): List<Message> {
+        if (messages.none { MessageCrypto.isCipherText(it.text) }) return messages
+        val gc = crypto.crypto(groupId).first()
+        return messages.map { m ->
+            if (!MessageCrypto.isCipherText(m.text)) return@map m
+            val name = m.displayName
+            val shown = when (
+                val o = MessageCrypto.decrypt(m.text, m.seq, m.senderId, gc.keysForDecrypt)
+            ) {
+                is CryptoOutcome.Decrypted -> o.plaintext
+                else -> ENCRYPTED_PREVIEW
+            }
+            m.copy(body = if (name.isNullOrBlank()) shown else "$name: $shown")
+        }
+    }
+
     companion object {
         const val ERROR_TIMEOUT = "send_timed_out"
+        const val ENCRYPTED_PREVIEW = "🔒"
     }
 }

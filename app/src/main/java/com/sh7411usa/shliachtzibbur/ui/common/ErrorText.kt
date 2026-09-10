@@ -21,6 +21,7 @@ fun ApiException.toUserMessage(): String = when (type) {
     "auth_error_invalid_phone" -> stringResource(R.string.auth_error_invalid_phone)
     ErrorType.GROUP_TOO_SMALL -> stringResource(R.string.messages_too_small_generic)
     "send_timed_out" -> stringResource(R.string.messages_send_timed_out)
+    ErrorType.ENCRYPTION_LOCKED -> stringResource(R.string.enc_error_locked)
     ErrorType.GROUP_FULL -> stringResource(R.string.members_error_group_full)
     ErrorType.LAST_ADMIN -> stringResource(R.string.members_error_last_admin)
     ErrorType.VALIDATION_FAILED -> fieldErrors.values.firstOrNull()

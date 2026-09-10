@@ -17,10 +17,13 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.ui.Alignment
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -48,6 +51,7 @@ fun CreateGroupScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     var name by rememberSaveable { mutableStateOf("") }
     var category by rememberSaveable { mutableStateOf("") }
+    var encrypted by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(state.categories) {
         if (category.isBlank()) category = state.categories.firstOrNull().orEmpty()
@@ -103,17 +107,34 @@ fun CreateGroupScreen(
                     )
                 }
             }
+            Spacer(Modifier.height(8.dp))
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(stringResource(R.string.enc_create_label))
+                    Text(
+                        stringResource(R.string.enc_toggle_desc),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(checked = encrypted, onCheckedChange = { encrypted = it })
+            }
             state.error?.let {
                 Text(
                     it.toUserMessage(),
-                    color = androidx.compose.material3.MaterialTheme.colorScheme.error,
+                    color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.padding(top = 8.dp),
                 )
             }
             Spacer(Modifier.height(24.dp))
             PrimaryButton(
                 text = stringResource(R.string.group_create_submit),
-                onClick = { viewModel.create(name, category) },
+                onClick = { viewModel.create(name, category, encrypted) },
                 enabled = name.isNotBlank() && category.isNotBlank(),
                 loading = state.submitting,
                 modifier = Modifier.fillMaxWidth(),

@@ -57,4 +57,5 @@ object ErrorType {
     const val NETWORK = "client_network_error"
     const val MALFORMED_RESPONSE = "client_malformed_response"
     const val UNKNOWN = "client_unknown_error"
+    const val ENCRYPTION_LOCKED = "client_encryption_locked"
 }

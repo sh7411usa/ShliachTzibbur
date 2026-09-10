@@ -112,6 +112,46 @@
     <string name="messages_reply_prefix">Message #%1$d</string>
     <string name="messages_reply_unavailable">Original message unavailable</string>
 
+    <!-- Encryption -->
+    <string name="enc_section">Encryption</string>
+    <string name="enc_state_on">On</string>
+    <string name="enc_state_off">Off</string>
+    <string name="enc_screen_title">Encryption</string>
+    <string name="enc_toggle_label">Encrypt this group</string>
+    <string name="enc_toggle_desc">Messages are encrypted on this device with a shared key. Only admins can turn this on or off or change the key.</string>
+    <string name="enc_enable_confirm">New messages will be encrypted with a shared key. Share the key with members through another channel so they can read them.</string>
+    <string name="enc_disable_confirm">New messages will be sent unencrypted. Messages already encrypted still need their key to read.</string>
+    <string name="enc_keys_header">Keys</string>
+    <string name="enc_key_current">Current</string>
+    <string name="enc_key_added">Added %1$s</string>
+    <string name="enc_add_key_label">Add a key</string>
+    <string name="enc_add_key_hint">64 hex characters</string>
+    <string name="enc_add_key_invalid">Enter a valid 64-character hex key.</string>
+    <string name="enc_action_use">Use for sending</string>
+    <string name="enc_generate_key">Generate new group key</string>
+    <string name="enc_generate_confirm">Everyone in the group will be locked out until they enter the new key. Generate a new key and switch to it?</string>
+    <string name="enc_delete_key_confirm">Delete this key? You may lose the ability to read messages that were encrypted with it.</string>
+    <string name="enc_lock_title">This group is encrypted</string>
+    <string name="enc_lock_body">Enter the shared key to read and send messages. Ask a group admin for it.</string>
+    <string name="enc_lock_hint">Encryption key (hex)</string>
+    <string name="enc_unlock">Unlock</string>
+    <string name="enc_key_wrong">That key can\'t open the latest message. Try another.</string>
+    <string name="enc_error_locked">Enter the encryption key for this group before sending.</string>
+    <string name="enc_badge_secure">Encrypted</string>
+    <string name="enc_badge_insecure">Not encrypted</string>
+    <string name="enc_badge_undecryptable">Can\'t decrypt — tap to add a key</string>
+    <string name="enc_undecryptable_body">Can\'t decrypt this message.</string>
+    <string name="enc_view_original">View original</string>
+    <string name="enc_original_title">Encrypted text</string>
+    <string name="enc_paste_key_title">Add a key</string>
+    <string name="enc_tag_enabled">%1$s turned on encryption</string>
+    <string name="enc_tag_disabled">%1$s turned off encryption</string>
+    <string name="enc_tag_key_changed">%1$s changed the encryption key</string>
+    <string name="enc_tag_enabled_generic">Encryption was turned on</string>
+    <string name="enc_tag_disabled_generic">Encryption was turned off</string>
+    <string name="enc_tag_key_changed_generic">The encryption key was changed</string>
+    <string name="enc_create_label">Encrypt this group</string>
+
     <!-- Group settings -->
     <string name="group_settings_title">Group settings</string>
     <string name="group_settings_name">Name</string>

@@ -33,6 +33,10 @@ interface MessageDao {
     )
     suspend fun search(query: String, limit: Int = 100): List<MessageEntity>
 
+    /** Rows whose body contains a `$E<n>:` encryption token, for decrypt-then-match search. */
+    @Query("SELECT * FROM messages WHERE body GLOB '*[\$]E[0-9]:*' ORDER BY createdAt DESC, seq DESC LIMIT :limit")
+    suspend fun cipherMessages(limit: Int = 200): List<MessageEntity>
+
     @Upsert
     suspend fun upsert(messages: List<MessageEntity>)
 
