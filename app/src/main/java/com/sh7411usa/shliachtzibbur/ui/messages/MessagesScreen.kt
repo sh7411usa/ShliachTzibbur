@@ -12,12 +12,16 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -29,6 +33,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.DropdownMenu
@@ -59,6 +64,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -69,7 +75,9 @@ import com.sh7411usa.shliachtzibbur.core.model.OutboxState
 import com.sh7411usa.shliachtzibbur.core.model.WhoCanPost
 import com.sh7411usa.shliachtzibbur.ui.AppViewModelFactory
 import com.sh7411usa.shliachtzibbur.ui.common.MessageText
+import com.sh7411usa.shliachtzibbur.ui.common.ReplyToken
 import com.sh7411usa.shliachtzibbur.ui.common.focusHighlight
+import com.sh7411usa.shliachtzibbur.ui.common.rememberIsTouchDevice
 import com.sh7411usa.shliachtzibbur.ui.common.toUserMessage
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -86,8 +94,19 @@ fun MessagesScreen(
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     val threadQuery by viewModel.threadQuery.collectAsStateWithLifecycle()
     var searchOpen by rememberSaveable { mutableStateOf(false) }
+    var replyToSeq by rememberSaveable { mutableStateOf<Long?>(null) }
 
     val listState = rememberLazyListState()
+
+    // Resolve reply markers against the messages currently in the thread.
+    val deliveredBySeq = remember(items) {
+        items.asSequence()
+            .filterIsInstance<ConversationItem.Delivered>()
+            .associateBy { it.message.seq }
+    }
+    fun quotedFor(seq: Long): QuotedRef =
+        deliveredBySeq[seq]?.message?.let { QuotedRef(seq, it.displayName, ReplyToken.strip(it.text)) }
+            ?: QuotedRef(seq, null, null)
 
     // Scroll to the newest message only when the tail changes (a new message),
     // not when older history is prepended by pagination.
@@ -171,6 +190,8 @@ fun MessagesScreen(
                 blockedReason = postBlockedReason,
                 sending = state.sending,
                 maxLength = group?.limits?.messageMaxLength ?: 1000,
+                replyingTo = replyToSeq?.let { quotedFor(it) },
+                onCancelReply = { replyToSeq = null },
                 onSend = viewModel::send,
             )
         },
@@ -215,15 +236,23 @@ fun MessagesScreen(
                     }
                     items(items, key = { it.key() }) { item ->
                         when (item) {
-                            is ConversationItem.Delivered -> MessageBubble(
-                                text = item.message.text,
-                                seq = item.message.seq,
-                                sender = item.message.displayName,
-                                isSelf = item.message.senderId == selfId,
-                                isSystem = isSystem,
-                                markdown = settings.messagesMarkdown && !isSystem,
-                                showSeq = settings.showMessageSeq,
-                            )
+                            is ConversationItem.Delivered -> {
+                                val reply = remember(item.message.text) {
+                                    ReplyToken.parse(item.message.text)
+                                }
+                                MessageBubble(
+                                    text = reply?.body ?: item.message.text,
+                                    quoted = reply?.let { quotedFor(it.seq) },
+                                    seq = item.message.seq,
+                                    sender = item.message.displayName,
+                                    isSelf = item.message.senderId == selfId,
+                                    isSystem = isSystem,
+                                    markdown = settings.messagesMarkdown && !isSystem,
+                                    showSeq = settings.showMessageSeq,
+                                    canReply = postBlockedReason == null,
+                                    onReply = { replyToSeq = item.message.seq },
+                                )
+                            }
 
                             is ConversationItem.Pending -> PendingBubble(
                                 text = item.outbox.text,
@@ -274,18 +303,25 @@ private fun readContactSnippet(context: Context, contactUri: Uri): String? = run
     }.takeIf { it.isNotBlank() }
 }.getOrNull()
 
+/** The referenced message for a reply preview. [sender]/[text] are null when it isn't loaded. */
+private data class QuotedRef(val seq: Long, val sender: String?, val text: String?)
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun MessageBubble(
     text: String,
+    quoted: QuotedRef?,
     seq: Long,
     sender: String?,
     isSelf: Boolean,
     isSystem: Boolean,
     markdown: Boolean,
     showSeq: Boolean,
+    canReply: Boolean,
+    onReply: () -> Unit,
 ) {
     val clipboard = LocalClipboardManager.current
+    val isTouch = rememberIsTouchDevice()
     var menuOpen by remember { mutableStateOf(false) }
 
     if (isSystem) {
@@ -322,7 +358,13 @@ private fun MessageBubble(
                 Modifier
                     .widthIn(max = 320.dp)
                     .focusHighlight(makeFocusable = true)
-                    .combinedClickable(onClick = {}, onLongClick = { menuOpen = true })
+                    .combinedClickable(
+                        // On non-touch devices the D-pad centre key opens the menu
+                        // (there is no long-press); on touch devices a tap is inert
+                        // and the long-press opens it, as before.
+                        onClick = { if (!isTouch) menuOpen = true },
+                        onLongClick = { menuOpen = true },
+                    )
                     .background(bubbleColor, RoundedCornerShape(14.dp))
                     .padding(horizontal = 12.dp, vertical = 8.dp),
             ) {
@@ -333,9 +375,21 @@ private fun MessageBubble(
                         color = MaterialTheme.colorScheme.primary,
                     )
                 }
+                if (quoted != null) {
+                    QuotedPreview(quoted, onBubble)
+                }
                 MessageText(text = text, markdown = markdown, color = onBubble)
             }
             DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                if (canReply) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.messages_reply)) },
+                        onClick = {
+                            menuOpen = false
+                            onReply()
+                        },
+                    )
+                }
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.action_copy)) },
                     onClick = {
@@ -351,6 +405,43 @@ private fun MessageBubble(
                     },
                 )
             }
+        }
+    }
+}
+
+/** WhatsApp/Telegram-style quoted preview of the message a reply points at. */
+@Composable
+private fun QuotedPreview(quoted: QuotedRef, onBubble: Color) {
+    Row(
+        Modifier
+            .padding(bottom = 4.dp)
+            .fillMaxWidth()
+            .height(IntrinsicSize.Min)
+            .background(onBubble.copy(alpha = 0.10f), RoundedCornerShape(6.dp))
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+    ) {
+        Box(
+            Modifier
+                .fillMaxHeight()
+                .width(3.dp)
+                .background(onBubble.copy(alpha = 0.5f), RoundedCornerShape(2.dp)),
+        )
+        Column(Modifier.padding(start = 8.dp)) {
+            Text(
+                quoted.sender ?: stringResource(R.string.messages_reply_prefix, quoted.seq),
+                style = MaterialTheme.typography.labelMedium,
+                color = onBubble,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                quoted.text?.takeIf { it.isNotBlank() }
+                    ?: stringResource(R.string.messages_reply_unavailable),
+                style = MaterialTheme.typography.bodySmall,
+                color = onBubble.copy(alpha = 0.8f),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }
@@ -430,6 +521,8 @@ private fun MessageInputBar(
     blockedReason: String?,
     sending: Boolean,
     maxLength: Int,
+    replyingTo: QuotedRef?,
+    onCancelReply: () -> Unit,
     onSend: (String) -> Unit,
 ) {
     var text by remember { mutableStateOf("") }
@@ -441,10 +534,11 @@ private fun MessageInputBar(
     }
 
     fun sendNow() {
-        val toSend = text.trim()
-        if (toSend.isNotEmpty() && enabled && !sending) {
-            onSend(toSend)
+        val body = text.trim()
+        if (body.isNotEmpty() && enabled && !sending) {
+            onSend(replyingTo?.let { ReplyToken.format(it.seq, body) } ?: body)
             text = ""
+            onCancelReply()
         }
     }
 
@@ -478,6 +572,45 @@ private fun MessageInputBar(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
             )
         } else {
+            if (replyingTo != null) {
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(start = 12.dp, end = 4.dp, top = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            stringResource(
+                                R.string.messages_replying_to,
+                                replyingTo.sender ?: "#${replyingTo.seq}",
+                            ),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        replyingTo.text?.takeIf { it.isNotBlank() }?.let {
+                            Text(
+                                it,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
+                    IconButton(
+                        onClick = onCancelReply,
+                        modifier = Modifier.focusHighlight(makeFocusable = true),
+                    ) {
+                        Icon(
+                            Icons.Filled.Close,
+                            contentDescription = stringResource(R.string.action_close),
+                        )
+                    }
+                }
+            }
             Row(
                 Modifier
                     .fillMaxWidth()

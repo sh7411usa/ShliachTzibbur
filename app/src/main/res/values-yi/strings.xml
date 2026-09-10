@@ -16,6 +16,10 @@
     <string name="messages_attach">צוהעפֿטן</string>
     <string name="messages_attach_contact">קאָנטאַקט</string>
     <string name="messages_attach_location">איצטיקער אָרט</string>
+    <string name="messages_reply">ענטפֿער</string>
+    <string name="messages_replying_to">ענטפֿערן אויף %1$s</string>
+    <string name="messages_reply_prefix">מעלדונג ‎#%1$d</string>
+    <string name="messages_reply_unavailable">אָריגינעלע מעלדונג ניט פֿאַראַן</string>
     <string name="app_settings_section_messages">מעלדונגען</string>
     <string name="app_settings_messages_markdown">פֿאָרעם מעלדונגען מיט Markdown</string>
     <string name="app_settings_messages_markdown_explain">ווײַז **דיק**, *נטוי*, רשימות און לינקס אין דעם מעלדונג־טעקסט.</string>

@@ -11,6 +11,10 @@
     <string name="messages_attach">Adjuntar</string>
     <string name="messages_attach_contact">Contacto</string>
     <string name="messages_attach_location">Ubicación actual</string>
+    <string name="messages_reply">Responder</string>
+    <string name="messages_replying_to">Respondiendo a %1$s</string>
+    <string name="messages_reply_prefix">Mensaje n.º %1$d</string>
+    <string name="messages_reply_unavailable">Mensaje original no disponible</string>
     <string name="app_settings_section_messages">Mensajes</string>
     <string name="app_settings_messages_markdown">Formatear mensajes con Markdown</string>
     <string name="app_settings_messages_markdown_explain">Muestra **negrita**, *cursiva*, listas y enlaces en el texto de los mensajes.</string>

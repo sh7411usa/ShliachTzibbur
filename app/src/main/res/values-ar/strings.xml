@@ -11,6 +11,10 @@
     <string name="messages_attach">إرفاق</string>
     <string name="messages_attach_contact">جهة اتصال</string>
     <string name="messages_attach_location">الموقع الحالي</string>
+    <string name="messages_reply">رد</string>
+    <string name="messages_replying_to">رد على %1$s</string>
+    <string name="messages_reply_prefix">رسالة رقم %1$d</string>
+    <string name="messages_reply_unavailable">الرسالة الأصلية غير متاحة</string>
     <string name="app_settings_section_messages">الرسائل</string>
     <string name="app_settings_messages_markdown">تنسيق الرسائل باستخدام Markdown</string>
     <string name="app_settings_messages_markdown_explain">إظهار **الغامق** و*المائل* والقوائم والروابط في نص الرسالة.</string>

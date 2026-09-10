@@ -6,6 +6,25 @@ stays in sync with `app/build.gradle.kts`.
 
 ---
 
+## 0.9 — versionCode 10 — 2026-09-10
+
+Replies in the conversation view.
+
+- **Reply**: long-press a message → **Reply** (also the D-pad centre key now
+  opens the message menu on non-touch devices). The composer shows a preview
+  strip of the message being answered, with an "×" to cancel.
+- On send, a marker `RE:<seq> ` is prepended to the message text (the service has
+  no native reply concept). New dependency-free `ReplyToken` parses / formats /
+  strips it.
+- A message whose text starts with that marker renders a **quoted preview** of
+  the referenced message inside the bubble — sender name + snippet, WhatsApp /
+  Telegram style — and the marker itself is hidden. If the referenced message
+  isn't loaded in the thread, the quote shows "Message #<seq>" /
+  "Original message unavailable".
+
+### Deferred
+- Tapping a quoted preview to scroll to the original message.
+
 ## 0.8 — versionCode 9 — 2026-09-10
 
 Conversation view upgrades.

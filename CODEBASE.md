@@ -147,7 +147,8 @@ com.sh7411usa.shliachtzibbur
                              ApiException.toUserMessage;
                              Linkify (URL/email/phone detection, JVM-testable) +
                              MarkdownText (CommonMark subset, legal screens) +
-                             MessageText (Markdown + linkify for chat bubbles) —
+                             MessageText (Markdown + linkify for chat bubbles) +
+                             ReplyToken (RE:<seq> marker parse/format/strip) —
                              all dependency-free
     navigation/              Routes, ShliachNavHost (auth graph vs main graph chosen by
                              session; no bottom nav — Groups is the single home,
@@ -169,9 +170,10 @@ com.sh7411usa.shliachtzibbur
                              settings + thread search; starts a WebSocket session
                              while open; send/retry/deleteFailed/loadOlder;
                              confirm-sweep + 5s poll; marks read) + MessagesScreen
-                             (MessageText bubbles, optional #seq, long-press
-                             Copy menu, attach contact/location, in-thread search,
-                             input bar with IME-Send + insets)
+                             (MessageText bubbles, optional #seq, long-press /
+                             D-pad-centre menu: Reply / Copy, quoted-reply preview
+                             in the bubble, attach contact/location, in-thread
+                             search, input bar with reply strip + IME-Send + insets)
     groupsettings/           AddMembersViewModel + AddMembersScreen (searchable contact
                              multi-select picker + type-a-number; already-members
                              disabled), plus

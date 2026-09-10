@@ -11,6 +11,10 @@
     <string name="messages_attach">צירוף</string>
     <string name="messages_attach_contact">איש קשר</string>
     <string name="messages_attach_location">מיקום נוכחי</string>
+    <string name="messages_reply">השב</string>
+    <string name="messages_replying_to">בתגובה אל %1$s</string>
+    <string name="messages_reply_prefix">הודעה ‎#%1$d</string>
+    <string name="messages_reply_unavailable">ההודעה המקורית אינה זמינה</string>
     <string name="app_settings_section_messages">הודעות</string>
     <string name="app_settings_messages_markdown">עיצוב הודעות עם Markdown</string>
     <string name="app_settings_messages_markdown_explain">הצגת **מודגש**, *נטוי*, רשימות וקישורים בטקסט ההודעה.</string>
