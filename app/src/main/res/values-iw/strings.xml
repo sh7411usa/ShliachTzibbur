@@ -2,6 +2,21 @@
     <string name="app_name">שליח ציבור</string>
 
     <string name="action_allow">אישור</string>
+    <string name="action_copy">העתקה</string>
+    <string name="search_groups_hint">חיפוש קבוצות והודעות</string>
+    <string name="search_in_thread">חיפוש בשיחה זו</string>
+    <string name="search_no_results">לא נמצא דבר.</string>
+    <string name="search_section_messages">הודעות</string>
+    <string name="messages_copy_seq">העתק ‎#%1$d</string>
+    <string name="messages_attach">צירוף</string>
+    <string name="messages_attach_contact">איש קשר</string>
+    <string name="messages_attach_location">מיקום נוכחי</string>
+    <string name="app_settings_section_messages">הודעות</string>
+    <string name="app_settings_messages_markdown">עיצוב הודעות עם Markdown</string>
+    <string name="app_settings_messages_markdown_explain">הצגת **מודגש**, *נטוי*, רשימות וקישורים בטקסט ההודעה.</string>
+    <string name="app_settings_show_message_seq">הצגת מספרי הודעות</string>
+    <string name="contacts_invite_sms">שליחת SMS</string>
+    <string name="contacts_invite_share">שיתוף</string>
     <string name="add_members_title">הוספת חברים</string>
     <string name="add_members_search">חיפוש אנשי קשר</string>
     <string name="add_members_type_number">הקלד מספר</string>

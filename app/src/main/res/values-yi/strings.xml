@@ -7,6 +7,21 @@
     <string name="app_name">שליח ציבור</string>
 
     <string name="action_allow">דערלויבן</string>
+    <string name="action_copy">קאָפּיר</string>
+    <string name="search_groups_hint">זוך גרופּעס און מעלדונגען</string>
+    <string name="search_in_thread">זוך אין דעם שמועס</string>
+    <string name="search_no_results">גאָרנישט געפֿונען.</string>
+    <string name="search_section_messages">מעלדונגען</string>
+    <string name="messages_copy_seq">קאָפּיר ‎#%1$d</string>
+    <string name="messages_attach">צוהעפֿטן</string>
+    <string name="messages_attach_contact">קאָנטאַקט</string>
+    <string name="messages_attach_location">איצטיקער אָרט</string>
+    <string name="app_settings_section_messages">מעלדונגען</string>
+    <string name="app_settings_messages_markdown">פֿאָרעם מעלדונגען מיט Markdown</string>
+    <string name="app_settings_messages_markdown_explain">ווײַז **דיק**, *נטוי*, רשימות און לינקס אין דעם מעלדונג־טעקסט.</string>
+    <string name="app_settings_show_message_seq">ווײַז מעלדונג־נומערן</string>
+    <string name="contacts_invite_sms">שיק SMS</string>
+    <string name="contacts_invite_share">טייל</string>
     <string name="add_members_title">צוגעבן מיטגלידער</string>
     <string name="add_members_search">זוך קאָנטאַקטן</string>
     <string name="add_members_type_number">טיפּ אַ נומער</string>

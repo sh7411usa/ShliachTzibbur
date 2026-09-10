@@ -19,6 +19,13 @@
     <string name="action_sign_out">Sign out</string>
     <string name="action_more">More options</string>
     <string name="action_allow">Allow</string>
+    <string name="action_copy">Copy</string>
+
+    <!-- Search -->
+    <string name="search_groups_hint">Search groups and messages</string>
+    <string name="search_in_thread">Search this conversation</string>
+    <string name="search_no_results">Nothing found.</string>
+    <string name="search_section_messages">Messages</string>
 
     <!-- Generic states -->
     <string name="state_loading">Loading…</string>
@@ -94,6 +101,10 @@
     <string name="messages_delete_message">Delete</string>
     <string name="messages_too_small_generic">This group doesn\'t have enough members to post yet.</string>
     <string name="messages_send_timed_out">Message timed out.</string>
+    <string name="messages_copy_seq">Copy #%1$d</string>
+    <string name="messages_attach">Attach</string>
+    <string name="messages_attach_contact">Contact</string>
+    <string name="messages_attach_location">Current location</string>
 
     <!-- Group settings -->
     <string name="group_settings_title">Group settings</string>
@@ -159,6 +170,10 @@
     <string name="app_settings_notifications_enabled">Show message notifications</string>
     <string name="app_settings_sync_service">Keep sync running in the background</string>
     <string name="app_settings_sync_service_explain">Delivers messages promptly by keeping a connection open. Uses more battery and shows a permanent notification. When off, messages are fetched periodically.</string>
+    <string name="app_settings_section_messages">Messages</string>
+    <string name="app_settings_messages_markdown">Format messages with Markdown</string>
+    <string name="app_settings_messages_markdown_explain">Render **bold**, *italic*, lists and links in message text.</string>
+    <string name="app_settings_show_message_seq">Show message numbers</string>
     <string name="app_settings_version">Version %1$s (%2$d)</string>
     <string name="app_settings_open_source">Open-source Tzibbur client</string>
 
@@ -192,5 +207,7 @@
     <string name="contacts_invite">Invite</string>
     <string name="contacts_invite_title">Invite to Tzibbur</string>
     <string name="contacts_invite_send">Send</string>
+    <string name="contacts_invite_sms">Send SMS</string>
+    <string name="contacts_invite_share">Share</string>
     <string name="invite_blurb">Join me on Tzibbur — a simple app for group messages. Create an account at https://tzibbur.me</string>
 </resources>

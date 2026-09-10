@@ -119,6 +119,21 @@ fun AppSettingsScreen(
 
             ThinDivider(Modifier.padding(vertical = 8.dp))
 
+            SectionHeader(stringResource(R.string.app_settings_section_messages))
+            SwitchRow(
+                label = stringResource(R.string.app_settings_messages_markdown),
+                description = stringResource(R.string.app_settings_messages_markdown_explain),
+                checked = settings.messagesMarkdown,
+                onCheckedChange = viewModel::setMessagesMarkdown,
+            )
+            SwitchRow(
+                label = stringResource(R.string.app_settings_show_message_seq),
+                checked = settings.showMessageSeq,
+                onCheckedChange = viewModel::setShowMessageSeq,
+            )
+
+            ThinDivider(Modifier.padding(vertical = 8.dp))
+
             SectionHeader(stringResource(R.string.app_settings_section_about))
             Text(
                 stringResource(R.string.app_settings_version, BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE),

@@ -2,6 +2,21 @@
     <string name="app_name">شليح تسيبور</string>
 
     <string name="action_allow">السماح</string>
+    <string name="action_copy">نسخ</string>
+    <string name="search_groups_hint">البحث في المجموعات والرسائل</string>
+    <string name="search_in_thread">البحث في هذه المحادثة</string>
+    <string name="search_no_results">لم يُعثر على شيء.</string>
+    <string name="search_section_messages">الرسائل</string>
+    <string name="messages_copy_seq">نسخ رقم %1$d</string>
+    <string name="messages_attach">إرفاق</string>
+    <string name="messages_attach_contact">جهة اتصال</string>
+    <string name="messages_attach_location">الموقع الحالي</string>
+    <string name="app_settings_section_messages">الرسائل</string>
+    <string name="app_settings_messages_markdown">تنسيق الرسائل باستخدام Markdown</string>
+    <string name="app_settings_messages_markdown_explain">إظهار **الغامق** و*المائل* والقوائم والروابط في نص الرسالة.</string>
+    <string name="app_settings_show_message_seq">إظهار أرقام الرسائل</string>
+    <string name="contacts_invite_sms">إرسال رسالة نصية</string>
+    <string name="contacts_invite_share">مشاركة</string>
     <string name="add_members_title">إضافة أعضاء</string>
     <string name="add_members_search">البحث في جهات الاتصال</string>
     <string name="add_members_type_number">اكتب رقمًا</string>

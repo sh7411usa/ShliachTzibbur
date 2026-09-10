@@ -14,10 +14,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -26,13 +28,19 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -45,6 +53,7 @@ import com.sh7411usa.shliachtzibbur.ui.AppViewModelFactory
 import com.sh7411usa.shliachtzibbur.ui.common.EmptyState
 import com.sh7411usa.shliachtzibbur.ui.common.ErrorRow
 import com.sh7411usa.shliachtzibbur.ui.common.PrimaryButton
+import com.sh7411usa.shliachtzibbur.ui.common.SectionHeader
 import com.sh7411usa.shliachtzibbur.ui.common.ThinDivider
 import com.sh7411usa.shliachtzibbur.ui.common.focusHighlight
 import com.sh7411usa.shliachtzibbur.ui.common.toUserMessage
@@ -60,23 +69,62 @@ fun GroupsScreen(
 ) {
     val groups by viewModel.groups.collectAsStateWithLifecycle()
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val query by viewModel.query.collectAsStateWithLifecycle()
+    val searchResults by viewModel.searchResults.collectAsStateWithLifecycle()
+    var searchOpen by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.groups_title)) },
+                title = {
+                    if (searchOpen) {
+                        TextField(
+                            value = query,
+                            onValueChange = viewModel::setQuery,
+                            placeholder = { Text(stringResource(R.string.search_groups_hint)) },
+                            singleLine = true,
+                            colors = TextFieldDefaults.colors(
+                                focusedContainerColor = Color.Transparent,
+                                unfocusedContainerColor = Color.Transparent,
+                                focusedIndicatorColor = Color.Transparent,
+                                unfocusedIndicatorColor = Color.Transparent,
+                            ),
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    } else {
+                        Text(stringResource(R.string.groups_title))
+                    }
+                },
+                navigationIcon = {
+                    if (searchOpen) {
+                        IconButton(onClick = { searchOpen = false; viewModel.setQuery("") }) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = stringResource(R.string.action_back),
+                            )
+                        }
+                    }
+                },
                 actions = {
-                    IconButton(onClick = viewModel::refresh) {
-                        Icon(Icons.Filled.Refresh, contentDescription = stringResource(R.string.action_refresh))
+                    IconButton(onClick = {
+                        searchOpen = !searchOpen
+                        if (!searchOpen) viewModel.setQuery("")
+                    }) {
+                        Icon(Icons.Filled.Search, contentDescription = stringResource(R.string.search_groups_hint))
                     }
-                    IconButton(onClick = onCreateGroup) {
-                        Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.groups_new))
-                    }
-                    IconButton(onClick = onOpenContacts) {
-                        Icon(Icons.Filled.Person, contentDescription = stringResource(R.string.nav_contacts))
-                    }
-                    IconButton(onClick = onOpenSettings) {
-                        Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.nav_settings))
+                    if (!searchOpen) {
+                        IconButton(onClick = viewModel::refresh) {
+                            Icon(Icons.Filled.Refresh, contentDescription = stringResource(R.string.action_refresh))
+                        }
+                        IconButton(onClick = onCreateGroup) {
+                            Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.groups_new))
+                        }
+                        IconButton(onClick = onOpenContacts) {
+                            Icon(Icons.Filled.Person, contentDescription = stringResource(R.string.nav_contacts))
+                        }
+                        IconButton(onClick = onOpenSettings) {
+                            Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.nav_settings))
+                        }
                     }
                 },
             )
@@ -87,6 +135,16 @@ fun GroupsScreen(
             }
         },
     ) { padding ->
+        if (searchOpen && query.isNotBlank()) {
+            SearchResultsList(
+                results = searchResults,
+                onOpenGroup = onOpenGroup,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+            )
+            return@Scaffold
+        }
         PullToRefreshBox(
             isRefreshing = state.refreshing,
             onRefresh = viewModel::refresh,
@@ -117,6 +175,48 @@ fun GroupsScreen(
                         ThinDivider(Modifier.padding(start = 16.dp))
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SearchResultsList(
+    results: SearchResults,
+    onOpenGroup: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    if (results.groups.isEmpty() && results.messages.isEmpty()) {
+        EmptyState(title = stringResource(R.string.search_no_results), modifier = modifier)
+        return
+    }
+    LazyColumn(modifier) {
+        if (results.groups.isNotEmpty()) {
+            item { SectionHeader(stringResource(R.string.nav_groups)) }
+            items(results.groups, key = { "g-${it.id}" }) { group ->
+                GroupRow(group = group, onClick = { onOpenGroup(group.id) })
+                ThinDivider(Modifier.padding(start = 16.dp))
+            }
+        }
+        if (results.messages.isNotEmpty()) {
+            item { SectionHeader(stringResource(R.string.search_section_messages)) }
+            items(results.messages, key = { "m-${it.message.id}" }) { hit ->
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .focusHighlight(makeFocusable = true)
+                        .clickable { onOpenGroup(hit.groupId) }
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                ) {
+                    Text(hit.groupName, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                    Text(
+                        hit.message.text,
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                ThinDivider(Modifier.padding(start = 16.dp))
             }
         }
     }

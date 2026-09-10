@@ -27,6 +27,12 @@ interface MessageDao {
     @Query("SELECT COUNT(*) FROM messages WHERE groupId = :groupId AND seq > :afterSeq")
     fun observeUnreadCount(groupId: String, afterSeq: Long): Flow<Int>
 
+    @Query(
+        "SELECT * FROM messages WHERE body LIKE '%' || :query || '%' " +
+            "ORDER BY createdAt DESC, seq DESC LIMIT :limit",
+    )
+    suspend fun search(query: String, limit: Int = 100): List<MessageEntity>
+
     @Upsert
     suspend fun upsert(messages: List<MessageEntity>)
 

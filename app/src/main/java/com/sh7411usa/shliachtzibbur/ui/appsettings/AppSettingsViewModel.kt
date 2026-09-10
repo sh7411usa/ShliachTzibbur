@@ -24,4 +24,10 @@ class AppSettingsViewModel(private val settingsStore: SettingsStore) : ViewModel
 
     fun setSyncServiceEnabled(enabled: Boolean) =
         viewModelScope.launch { settingsStore.setSyncServiceEnabled(enabled) }
+
+    fun setMessagesMarkdown(enabled: Boolean) =
+        viewModelScope.launch { settingsStore.setMessagesMarkdown(enabled) }
+
+    fun setShowMessageSeq(enabled: Boolean) =
+        viewModelScope.launch { settingsStore.setShowMessageSeq(enabled) }
 }

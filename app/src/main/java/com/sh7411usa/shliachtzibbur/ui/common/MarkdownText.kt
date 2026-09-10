@@ -124,21 +124,28 @@ private val INLINE = Regex(
         "|\\[([^\\]]+)]\\(([^)]+)\\)",   // link
 )
 
+/**
+ * Markdown inline spans (`**bold**`, `*italic*`, `` `code` ``, `[t](u)`) plus
+ * automatic linkification of bare URLs / e-mails / phone numbers.
+ */
 @Composable
-private fun renderInline(text: String): AnnotatedString = buildAnnotatedString {
-    var cursor = 0
-    for (match in INLINE.findAll(text)) {
-        if (match.range.first > cursor) append(text.substring(cursor, match.range.first))
-        val (code, bold, italic, linkText, linkUrl) = match.destructured
-        when {
-            code.isNotEmpty() -> withStyle(SpanStyle(fontFamily = FontFamily.Monospace)) { append(code) }
-            bold.isNotEmpty() -> withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(bold) }
-            italic.isNotEmpty() -> withStyle(SpanStyle(fontStyle = FontStyle.Italic)) { append(italic) }
-            linkText.isNotEmpty() -> withLink(LinkAnnotation.Url(linkUrl)) {
-                withStyle(SpanStyle(color = MaterialTheme.colorScheme.primary)) { append(linkText) }
+internal fun renderInline(text: String): AnnotatedString {
+    val linkColor = MaterialTheme.colorScheme.primary
+    return buildAnnotatedString {
+        var cursor = 0
+        for (match in INLINE.findAll(text)) {
+            if (match.range.first > cursor) appendLinkified(text.substring(cursor, match.range.first), linkColor)
+            val (code, bold, italic, linkText, linkUrl) = match.destructured
+            when {
+                code.isNotEmpty() -> withStyle(SpanStyle(fontFamily = FontFamily.Monospace)) { append(code) }
+                bold.isNotEmpty() -> withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(bold) }
+                italic.isNotEmpty() -> withStyle(SpanStyle(fontStyle = FontStyle.Italic)) { append(italic) }
+                linkText.isNotEmpty() -> withLink(LinkAnnotation.Url(linkUrl)) {
+                    withStyle(SpanStyle(color = linkColor)) { append(linkText) }
+                }
             }
+            cursor = match.range.last + 1
         }
-        cursor = match.range.last + 1
+        if (cursor < text.length) appendLinkified(text.substring(cursor), linkColor)
     }
-    if (cursor < text.length) append(text.substring(cursor))
 }

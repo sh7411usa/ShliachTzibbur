@@ -215,6 +215,13 @@ class MessageRepository(
         )
     }
 
+    /** Full-text-ish search across every cached message (case-insensitive LIKE). */
+    suspend fun search(query: String): List<Message> {
+        val q = query.trim()
+        if (q.isBlank()) return emptyList()
+        return messageDao.search(q).map { it.toDomain() }
+    }
+
     suspend fun markRead(groupId: String, seq: Long) {
         groupDao.advanceReadSeq(groupId, seq)
     }

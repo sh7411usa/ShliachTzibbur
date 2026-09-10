@@ -6,6 +6,30 @@ stays in sync with `app/build.gradle.kts`.
 
 ---
 
+## 0.8 — versionCode 9 — 2026-09-10
+
+Conversation view upgrades.
+
+- **Message rendering**: bare URLs, e-mails and phone numbers are auto-linked
+  (links + phones underlined, links + e-mails blue) and open via `ACTION_VIEW`
+  (`https:`, `mailto:`, `tel:`, `geo:`). New dependency-free `Linkify` +
+  `MessageText`; `MarkdownText` shares the linkifier.
+- **Markdown in messages**, toggle in Settings → Messages, **default on**.
+- **Message numbers**: optional greyed `#<seq>` above each bubble (Settings).
+- **Long-press a message** → Copy / Copy #<seq>.
+- **Attach** button in the input bar: a contact (name + number as text) via the
+  system contact picker, or the current location as a `geo:` URI
+  (`LocationManager`, no Play Services; `ACCESS_COARSE_LOCATION`).
+- **Search**: the groups screen searches group names and every cached message
+  body (`MessageDao.search`, debounced); a message hit opens its group. Each
+  conversation has its own search that filters the thread.
+- **Invite dialog**: "Send SMS" (opens the SMS app to `contact.e164` with the
+  blurb prefilled) and "Share" (system chooser, passing the number).
+
+### Deferred
+- Search "jump to message" (open a thread scrolled to the hit).
+- Thread search as prev/next over the full list (currently filters to matches).
+
 ## 0.7 — versionCode 8 — 2026-09-09
 
 D-pad / feature-phone fixes plus the background-sync default.

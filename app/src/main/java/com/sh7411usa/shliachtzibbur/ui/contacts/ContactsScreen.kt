@@ -246,17 +246,30 @@ private fun ContactRow(
             confirmButton = {
                 TextButton(onClick = {
                     showInvite = false
-                    val send = Intent(Intent.ACTION_SEND).apply {
-                        type = "text/plain"
-                        putExtra(Intent.EXTRA_TEXT, blurb)
+                    runCatching {
+                        val sms = Intent(
+                            Intent.ACTION_SENDTO,
+                            android.net.Uri.parse("smsto:${contact.e164}"),
+                        ).putExtra("sms_body", blurb)
+                        context.startActivity(sms)
                     }
-                    context.startActivity(Intent.createChooser(send, null))
-                }) { Text(stringResource(R.string.contacts_invite_send)) }
+                }) { Text(stringResource(R.string.contacts_invite_sms)) }
             },
             dismissButton = {
-                TextButton(onClick = { showInvite = false }) {
-                    Text(stringResource(R.string.action_cancel))
-                }
+                TextButton(onClick = {
+                    showInvite = false
+                    val share = Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(Intent.EXTRA_TEXT, blurb)
+                        putExtra(Intent.EXTRA_PHONE_NUMBER, contact.e164)
+                        putExtra("address", contact.e164)
+                    }
+                    runCatching {
+                        context.startActivity(
+                            Intent.createChooser(share, null),
+                        )
+                    }
+                }) { Text(stringResource(R.string.contacts_invite_share)) }
             },
         )
     }

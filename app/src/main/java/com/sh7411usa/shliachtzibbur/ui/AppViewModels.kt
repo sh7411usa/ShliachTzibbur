@@ -43,7 +43,12 @@ object AppViewModelFactory {
                 smsCodeReceiver = container.smsCodeReceiver,
             )
         }
-        initializer { GroupsViewModel(container.groupRepository) }
+        initializer {
+            GroupsViewModel(
+                groupRepository = container.groupRepository,
+                messageRepository = container.messageRepository,
+            )
+        }
         initializer {
             CreateGroupViewModel(
                 savedStateHandle = createSavedStateHandle(),
@@ -66,6 +71,7 @@ object AppViewModelFactory {
                 profileRepository = container.profileRepository,
                 syncManager = container.syncManager,
                 sessionStore = container.sessionStore,
+                settingsStore = container.settingsStore,
             )
         }
         initializer {

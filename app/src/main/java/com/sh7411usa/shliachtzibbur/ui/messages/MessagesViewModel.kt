@@ -7,7 +7,9 @@ import com.sh7411usa.shliachtzibbur.core.model.ConversationItem
 import com.sh7411usa.shliachtzibbur.core.model.Group
 import com.sh7411usa.shliachtzibbur.core.result.ApiException
 import com.sh7411usa.shliachtzibbur.core.result.ApiResult
+import com.sh7411usa.shliachtzibbur.data.prefs.AppSettings
 import com.sh7411usa.shliachtzibbur.data.prefs.SessionStore
+import com.sh7411usa.shliachtzibbur.data.prefs.SettingsStore
 import com.sh7411usa.shliachtzibbur.data.repo.GroupRepository
 import com.sh7411usa.shliachtzibbur.data.repo.MessageRepository
 import com.sh7411usa.shliachtzibbur.data.repo.ProfileRepository
@@ -19,6 +21,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -39,6 +42,7 @@ class MessagesViewModel(
     profileRepository: ProfileRepository,
     private val syncManager: SyncManager,
     sessionStore: SessionStore,
+    settingsStore: SettingsStore,
 ) : ViewModel() {
 
     val groupId: String = requireNotNull(savedStateHandle[NavArg.GROUP_ID])
@@ -46,8 +50,22 @@ class MessagesViewModel(
     val group: StateFlow<Group?> = groupRepository.group(groupId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
-    val conversation: StateFlow<List<ConversationItem>> = messageRepository.conversation(groupId)
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val settings: StateFlow<AppSettings> = settingsStore.settings
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AppSettings())
+
+    private val _threadQuery = MutableStateFlow("")
+    val threadQuery: StateFlow<String> = _threadQuery.asStateFlow()
+
+    val conversation: StateFlow<List<ConversationItem>> =
+        combine(messageRepository.conversation(groupId), _threadQuery) { items, query ->
+            if (query.isBlank()) {
+                items
+            } else {
+                items.filter {
+                    it is ConversationItem.Delivered && it.message.text.contains(query, ignoreCase = true)
+                }
+            }
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val selfUserId: StateFlow<String?> = sessionStore.session
         .map { it?.userId }
@@ -76,15 +94,17 @@ class MessagesViewModel(
                 }
             }
         }
-        // Everything shown while this screen is open counts as read.
+        // Everything in the thread while this screen is open counts as read.
         viewModelScope.launch {
-            conversation.collect { items ->
+            messageRepository.conversation(groupId).collect { items ->
                 items.filterIsInstance<ConversationItem.Delivered>()
                     .maxOfOrNull { it.message.seq }
                     ?.let { messageRepository.markRead(groupId, it) }
             }
         }
     }
+
+    fun setThreadQuery(query: String) = _threadQuery.update { query }
 
     fun refreshLatest() {
         viewModelScope.launch {

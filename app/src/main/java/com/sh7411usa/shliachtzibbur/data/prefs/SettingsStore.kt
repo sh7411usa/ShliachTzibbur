@@ -25,6 +25,10 @@ data class AppSettings(
     val mutedGroupIds: Set<String> = emptySet(),
     /** Last phone number used to sign in, prefilled on the login screen. Survives sign-out. */
     val lastPhoneE164: String = "",
+    /** Render Markdown in message bodies. */
+    val messagesMarkdown: Boolean = true,
+    /** Show a small "#<seq>" above each message. */
+    val showMessageSeq: Boolean = false,
 )
 
 class SettingsStore(private val context: Context) {
@@ -36,6 +40,8 @@ class SettingsStore(private val context: Context) {
         val SYNC_SERVICE = booleanPreferencesKey("sync_service_enabled")
         val MUTED = stringSetPreferencesKey("muted_group_ids")
         val LAST_PHONE = stringPreferencesKey("last_phone_e164")
+        val MESSAGES_MARKDOWN = booleanPreferencesKey("messages_markdown")
+        val SHOW_MESSAGE_SEQ = booleanPreferencesKey("show_message_seq")
     }
 
     val settings: Flow<AppSettings> = context.settingsDataStore.data.map { prefs ->
@@ -46,6 +52,8 @@ class SettingsStore(private val context: Context) {
             syncServiceEnabled = prefs[Keys.SYNC_SERVICE] ?: true,
             mutedGroupIds = prefs[Keys.MUTED].orEmpty(),
             lastPhoneE164 = prefs[Keys.LAST_PHONE].orEmpty(),
+            messagesMarkdown = prefs[Keys.MESSAGES_MARKDOWN] ?: true,
+            showMessageSeq = prefs[Keys.SHOW_MESSAGE_SEQ] ?: false,
         )
     }
 
@@ -63,6 +71,12 @@ class SettingsStore(private val context: Context) {
 
     suspend fun setLastPhoneE164(phone: String) =
         context.settingsDataStore.edit { it[Keys.LAST_PHONE] = phone }
+
+    suspend fun setMessagesMarkdown(enabled: Boolean) =
+        context.settingsDataStore.edit { it[Keys.MESSAGES_MARKDOWN] = enabled }
+
+    suspend fun setShowMessageSeq(enabled: Boolean) =
+        context.settingsDataStore.edit { it[Keys.SHOW_MESSAGE_SEQ] = enabled }
 
     suspend fun setGroupMuted(groupId: String, muted: Boolean) {
         context.settingsDataStore.edit { prefs ->

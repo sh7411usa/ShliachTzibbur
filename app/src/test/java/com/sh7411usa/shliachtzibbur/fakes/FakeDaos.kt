@@ -30,6 +30,9 @@ class FakeMessageDao : MessageDao {
     override suspend fun findByClientId(clientMessageId: String): MessageEntity? =
         rows.value.firstOrNull { it.clientMessageId == clientMessageId }
 
+    override suspend fun search(query: String, limit: Int): List<MessageEntity> =
+        rows.value.filter { it.body.contains(query, ignoreCase = true) }.take(limit)
+
     override fun observeUnreadCount(groupId: String, afterSeq: Long): Flow<Int> =
         rows.map { list -> list.count { it.groupId == groupId && it.seq > afterSeq } }
 

@@ -2,6 +2,21 @@
     <string name="app_name">Shliach Tzibbur</string>
 
     <string name="action_allow">Permitir</string>
+    <string name="action_copy">Copiar</string>
+    <string name="search_groups_hint">Buscar grupos y mensajes</string>
+    <string name="search_in_thread">Buscar en esta conversación</string>
+    <string name="search_no_results">No se encontró nada.</string>
+    <string name="search_section_messages">Mensajes</string>
+    <string name="messages_copy_seq">Copiar n.º %1$d</string>
+    <string name="messages_attach">Adjuntar</string>
+    <string name="messages_attach_contact">Contacto</string>
+    <string name="messages_attach_location">Ubicación actual</string>
+    <string name="app_settings_section_messages">Mensajes</string>
+    <string name="app_settings_messages_markdown">Formatear mensajes con Markdown</string>
+    <string name="app_settings_messages_markdown_explain">Muestra **negrita**, *cursiva*, listas y enlaces en el texto de los mensajes.</string>
+    <string name="app_settings_show_message_seq">Mostrar números de mensaje</string>
+    <string name="contacts_invite_sms">Enviar SMS</string>
+    <string name="contacts_invite_share">Compartir</string>
     <string name="add_members_title">Añadir miembros</string>
     <string name="add_members_search">Buscar contactos</string>
     <string name="add_members_type_number">Escribe un número</string>

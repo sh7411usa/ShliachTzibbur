@@ -1,7 +1,14 @@
 package com.sh7411usa.shliachtzibbur.ui.messages
 
+import android.content.Context
+import android.net.Uri
+import android.provider.ContactsContract
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,6 +28,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -39,15 +48,17 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -57,6 +68,7 @@ import com.sh7411usa.shliachtzibbur.core.model.GroupKind
 import com.sh7411usa.shliachtzibbur.core.model.OutboxState
 import com.sh7411usa.shliachtzibbur.core.model.WhoCanPost
 import com.sh7411usa.shliachtzibbur.ui.AppViewModelFactory
+import com.sh7411usa.shliachtzibbur.ui.common.MessageText
 import com.sh7411usa.shliachtzibbur.ui.common.focusHighlight
 import com.sh7411usa.shliachtzibbur.ui.common.toUserMessage
 
@@ -71,6 +83,9 @@ fun MessagesScreen(
     val items by viewModel.conversation.collectAsStateWithLifecycle()
     val state by viewModel.state.collectAsStateWithLifecycle()
     val selfId by viewModel.selfUserId.collectAsStateWithLifecycle()
+    val settings by viewModel.settings.collectAsStateWithLifecycle()
+    val threadQuery by viewModel.threadQuery.collectAsStateWithLifecycle()
+    var searchOpen by rememberSaveable { mutableStateOf(false) }
 
     val listState = rememberLazyListState()
 
@@ -98,13 +113,36 @@ fun MessagesScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        if (isSystem) stringResource(R.string.group_system_name) else group?.name.orEmpty(),
-                        maxLines = 1,
-                    )
+                    if (searchOpen) {
+                        TextField(
+                            value = threadQuery,
+                            onValueChange = viewModel::setThreadQuery,
+                            placeholder = { Text(stringResource(R.string.search_in_thread)) },
+                            singleLine = true,
+                            colors = TextFieldDefaults.colors(
+                                focusedContainerColor = Color.Transparent,
+                                unfocusedContainerColor = Color.Transparent,
+                                focusedIndicatorColor = Color.Transparent,
+                                unfocusedIndicatorColor = Color.Transparent,
+                            ),
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    } else {
+                        Text(
+                            if (isSystem) stringResource(R.string.group_system_name) else group?.name.orEmpty(),
+                            maxLines = 1,
+                        )
+                    }
                 },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = {
+                        if (searchOpen) {
+                            searchOpen = false
+                            viewModel.setThreadQuery("")
+                        } else {
+                            onBack()
+                        }
+                    }) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = stringResource(R.string.action_back),
@@ -112,6 +150,12 @@ fun MessagesScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = { searchOpen = !searchOpen; if (!searchOpen) viewModel.setThreadQuery("") }) {
+                        Icon(
+                            Icons.Filled.Search,
+                            contentDescription = stringResource(R.string.search_in_thread),
+                        )
+                    }
                     IconButton(onClick = { onOpenSettings(viewModel.groupId) }) {
                         Icon(
                             Icons.Filled.Settings,
@@ -173,9 +217,12 @@ fun MessagesScreen(
                         when (item) {
                             is ConversationItem.Delivered -> MessageBubble(
                                 text = item.message.text,
+                                seq = item.message.seq,
                                 sender = item.message.displayName,
                                 isSelf = item.message.senderId == selfId,
                                 isSystem = isSystem,
+                                markdown = settings.messagesMarkdown && !isSystem,
+                                showSeq = settings.showMessageSeq,
                             )
 
                             is ConversationItem.Pending -> PendingBubble(
@@ -197,14 +244,55 @@ private fun ConversationItem.key(): String = when (this) {
     is ConversationItem.Pending -> "p-${outbox.clientMessageId}"
 }
 
+/** Name + best phone number for a contact chosen via `ACTION_PICK`, as plain text. */
+private fun readContactSnippet(context: Context, contactUri: Uri): String? = runCatching {
+    val resolver = context.contentResolver
+    val (name, contactId) = resolver.query(
+        contactUri,
+        arrayOf(ContactsContract.Contacts.DISPLAY_NAME_PRIMARY, ContactsContract.Contacts._ID),
+        null, null, null,
+    )?.use { c ->
+        if (c.moveToFirst()) c.getString(0).orEmpty() to c.getString(1) else return@runCatching null
+    } ?: return@runCatching null
+
+    val number = resolver.query(
+        ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+        arrayOf(
+            ContactsContract.CommonDataKinds.Phone.NUMBER,
+            ContactsContract.CommonDataKinds.Phone.NORMALIZED_NUMBER,
+        ),
+        "${ContactsContract.CommonDataKinds.Phone.CONTACT_ID} = ?",
+        arrayOf(contactId),
+        null,
+    )?.use { c ->
+        if (c.moveToFirst()) c.getString(1)?.takeIf { it.isNotBlank() } ?: c.getString(0) else null
+    }
+
+    buildString {
+        append(name.ifBlank { number.orEmpty() })
+        if (!number.isNullOrBlank()) append('\n').append(number)
+    }.takeIf { it.isNotBlank() }
+}.getOrNull()
+
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun MessageBubble(text: String, sender: String?, isSelf: Boolean, isSystem: Boolean) {
+private fun MessageBubble(
+    text: String,
+    seq: Long,
+    sender: String?,
+    isSelf: Boolean,
+    isSystem: Boolean,
+    markdown: Boolean,
+    showSeq: Boolean,
+) {
+    val clipboard = LocalClipboardManager.current
+    var menuOpen by remember { mutableStateOf(false) }
+
     if (isSystem) {
-        Text(
-            text,
-            style = MaterialTheme.typography.bodyMedium,
+        MessageText(
+            text = text,
+            markdown = false,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 24.dp, vertical = 6.dp),
@@ -215,26 +303,54 @@ private fun MessageBubble(text: String, sender: String?, isSelf: Boolean, isSyst
         if (isSelf) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
     val onBubble =
         if (isSelf) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
-    Row(
+    Column(
         Modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 3.dp),
-        horizontalArrangement = if (isSelf) Arrangement.End else Arrangement.Start,
+        horizontalAlignment = if (isSelf) Alignment.End else Alignment.Start,
     ) {
-        Column(
-            Modifier
-                .widthIn(max = 320.dp)
-                .background(bubbleColor, RoundedCornerShape(14.dp))
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-        ) {
-            if (!isSelf && sender != null) {
-                Text(
-                    sender,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
+        if (showSeq) {
+            Text(
+                "#$seq",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                modifier = Modifier.padding(horizontal = 6.dp),
+            )
+        }
+        Box {
+            Column(
+                Modifier
+                    .widthIn(max = 320.dp)
+                    .focusHighlight(makeFocusable = true)
+                    .combinedClickable(onClick = {}, onLongClick = { menuOpen = true })
+                    .background(bubbleColor, RoundedCornerShape(14.dp))
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+            ) {
+                if (!isSelf && sender != null) {
+                    Text(
+                        sender,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+                MessageText(text = text, markdown = markdown, color = onBubble)
+            }
+            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.action_copy)) },
+                    onClick = {
+                        clipboard.setText(AnnotatedString(text))
+                        menuOpen = false
+                    },
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.messages_copy_seq, seq)) },
+                    onClick = {
+                        clipboard.setText(AnnotatedString("#$seq"))
+                        menuOpen = false
+                    },
                 )
             }
-            Text(text, style = MaterialTheme.typography.bodyLarge, color = onBubble)
         }
     }
 }
@@ -317,6 +433,12 @@ private fun MessageInputBar(
     onSend: (String) -> Unit,
 ) {
     var text by remember { mutableStateOf("") }
+    var attachOpen by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+
+    fun append(snippet: String) {
+        text = (if (text.isBlank()) "" else text.trimEnd() + "\n") + snippet
+    }
 
     fun sendNow() {
         val toSend = text.trim()
@@ -324,6 +446,21 @@ private fun MessageInputBar(
             onSend(toSend)
             text = ""
         }
+    }
+
+    val pickContact = rememberLauncherForActivityResult(ActivityResultContracts.PickContact()) { uri ->
+        uri?.let { readContactSnippet(context, it)?.let(::append) }
+    }
+    val locationPermission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions(),
+    ) {
+        com.sh7411usa.shliachtzibbur.core.util.LastLocation.geoUri(context)?.let(::append)
+    }
+
+    fun attachLocation() {
+        val geo = com.sh7411usa.shliachtzibbur.core.util.LastLocation.geoUri(context)
+        if (geo != null) append(geo)
+        else locationPermission.launch(com.sh7411usa.shliachtzibbur.core.util.LastLocation.permissions)
     }
 
     Column(
@@ -347,6 +484,33 @@ private fun MessageInputBar(
                     .padding(horizontal = 8.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                Box {
+                    IconButton(
+                        onClick = { attachOpen = true },
+                        modifier = Modifier.focusHighlight(makeFocusable = true),
+                    ) {
+                        Icon(
+                            Icons.Filled.Add,
+                            contentDescription = stringResource(R.string.messages_attach),
+                        )
+                    }
+                    DropdownMenu(expanded = attachOpen, onDismissRequest = { attachOpen = false }) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.messages_attach_contact)) },
+                            onClick = {
+                                attachOpen = false
+                                pickContact.launch(null)
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.messages_attach_location)) },
+                            onClick = {
+                                attachOpen = false
+                                attachLocation()
+                            },
+                        )
+                    }
+                }
                 TextField(
                     value = text,
                     onValueChange = { if (it.length <= maxLength) text = it },

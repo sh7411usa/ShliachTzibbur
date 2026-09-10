@@ -141,11 +141,14 @@ com.sh7411usa.shliachtzibbur
     locale/                  AppLanguage (System + English, Yiddish, Hebrew, Arabic,
                              Spanish; RTL flags), LocaleManager (AppCompat app locales)
     common/                  rememberIsTouchDevice, Modifier.focusHighlight (D-pad
-                             focus ring), LoadingBox / EmptyState / ErrorRow /
-                             ConfirmDialog / SectionHeader / SegmentedChoice /
-                             PrimaryButton / SecondaryButton, ApiException.toUserMessage,
-                             MarkdownText (dependency-free CommonMark subset renderer,
-                             used by the legal screens)
+                             focus ring), Modifier.dpadScrollable, LoadingBox /
+                             EmptyState / ErrorRow / ConfirmDialog / SectionHeader /
+                             SegmentedChoice / PrimaryButton / SecondaryButton,
+                             ApiException.toUserMessage;
+                             Linkify (URL/email/phone detection, JVM-testable) +
+                             MarkdownText (CommonMark subset, legal screens) +
+                             MessageText (Markdown + linkify for chat bubbles) —
+                             all dependency-free
     navigation/              Routes, ShliachNavHost (auth graph vs main graph chosen by
                              session; no bottom nav — Groups is the single home,
                              Contacts/Settings are top-bar destinations)
@@ -162,12 +165,13 @@ com.sh7411usa.shliachtzibbur
                              CreateGroupViewModel + CreateGroupScreen (category chips;
                              optional memberPhone arg adds a contact after creation),
                              categoryLabel
-    messages/                MessagesViewModel (group + conversation + self id; starts
-                             a WebSocket session while open; send/retry/deleteFailed/
-                             loadOlder/markRead; confirm-sweep loop for queued sends)
-                             + MessagesScreen (bubbles, system-thread style, input bar
-                             with post-permission gating, Retry/Delete menu on a
-                             failed bubble)
+    messages/                MessagesViewModel (group + conversation + self id +
+                             settings + thread search; starts a WebSocket session
+                             while open; send/retry/deleteFailed/loadOlder;
+                             confirm-sweep + 5s poll; marks read) + MessagesScreen
+                             (MessageText bubbles, optional #seq, long-press
+                             Copy menu, attach contact/location, in-thread search,
+                             input bar with IME-Send + insets)
     groupsettings/           AddMembersViewModel + AddMembersScreen (searchable contact
                              multi-select picker + type-a-number; already-members
                              disabled), plus
