@@ -60,6 +60,11 @@ com.sh7411usa.shliachtzibbur
 │   │   SmsCodeReceiver      scans the recent inbox (READ_SMS) and listens for a live
 │   │                        SMS (RECEIVE_SMS, RECEIVER_EXPORTED); extractCode() prefers
 │   │                        digits after the word "code". Auto-fills the OTP.
+│   │   LastLocation         last-known location as a geo: URI (LocationManager, no
+│   │                        Play Services); ACCESS_COARSE_LOCATION
+│   │   ReplyToken           the `RE:<seq> ` reply marker: parse / format / strip
+│   │   Reactions            an emoji-only ReplyToken reply = a reaction; QUICK /
+│   │                        PALETTE emoji sets + isEmojiOnly detection (JVM-testable)
 │   │
 │   └── net/
 │       NetJson              shared kotlinx.serialization Json (lenient, tolerant)
@@ -147,8 +152,7 @@ com.sh7411usa.shliachtzibbur
                              ApiException.toUserMessage;
                              Linkify (URL/email/phone detection, JVM-testable) +
                              MarkdownText (CommonMark subset, legal screens) +
-                             MessageText (Markdown + linkify for chat bubbles) +
-                             ReplyToken (RE:<seq> marker parse/format/strip) —
+                             MessageText (Markdown + linkify for chat bubbles) —
                              all dependency-free
     navigation/              Routes, ShliachNavHost (auth graph vs main graph chosen by
                              session; no bottom nav — Groups is the single home,
@@ -168,12 +172,15 @@ com.sh7411usa.shliachtzibbur
                              categoryLabel
     messages/                MessagesViewModel (group + conversation + self id +
                              settings + thread search; starts a WebSocket session
-                             while open; send/retry/deleteFailed/loadOlder;
+                             while open; send/react/retry/deleteFailed/loadOlder;
                              confirm-sweep + 5s poll; marks read) + MessagesScreen
                              (MessageText bubbles, optional #seq, long-press /
-                             D-pad-centre menu: Reply / Copy, quoted-reply preview
-                             in the bubble, attach contact/location, in-thread
-                             search, input bar with reply strip + IME-Send + insets)
+                             D-pad-centre menu: quick-emoji row + chooser / Reply /
+                             Copy; quoted-reply preview in the bubble; emoji
+                             reactions split from the stream and shown as
+                             collapsible badges on their target message; attach
+                             contact/location; in-thread search; input bar with
+                             reply strip + char counter + IME-Send + insets)
     groupsettings/           AddMembersViewModel + AddMembersScreen (searchable contact
                              multi-select picker + type-a-number; already-members
                              disabled), plus

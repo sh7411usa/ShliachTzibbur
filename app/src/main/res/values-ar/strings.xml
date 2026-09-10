@@ -7,7 +7,6 @@
     <string name="search_in_thread">البحث في هذه المحادثة</string>
     <string name="search_no_results">لم يُعثر على شيء.</string>
     <string name="search_section_messages">الرسائل</string>
-    <string name="messages_copy_seq">نسخ رقم %1$d</string>
     <string name="messages_attach">إرفاق</string>
     <string name="messages_attach_contact">جهة اتصال</string>
     <string name="messages_attach_location">الموقع الحالي</string>
@@ -129,6 +128,9 @@
     <string name="messages_send_failed">لم تُرسَل. اضغط لإعادة المحاولة.</string>
     <string name="messages_sending">جارٍ الإرسال…</string>
     <string name="messages_char_count">%1$d / %2$d</string>
+    <string name="messages_react_more">مزيد من التفاعلات</string>
+    <string name="messages_react_pick">اختر تفاعلاً</string>
+    <string name="messages_react_you">أنت</string>
 
     <string name="group_settings_title">إعدادات المجموعة</string>
     <string name="group_settings_name">الاسم</string>

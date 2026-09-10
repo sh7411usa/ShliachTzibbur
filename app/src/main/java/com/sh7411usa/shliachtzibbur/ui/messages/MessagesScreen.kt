@@ -9,6 +9,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,11 +19,15 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -34,15 +39,19 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
@@ -66,6 +75,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sh7411usa.shliachtzibbur.R
@@ -73,9 +83,10 @@ import com.sh7411usa.shliachtzibbur.core.model.ConversationItem
 import com.sh7411usa.shliachtzibbur.core.model.GroupKind
 import com.sh7411usa.shliachtzibbur.core.model.OutboxState
 import com.sh7411usa.shliachtzibbur.core.model.WhoCanPost
+import com.sh7411usa.shliachtzibbur.core.util.Reactions
+import com.sh7411usa.shliachtzibbur.core.util.ReplyToken
 import com.sh7411usa.shliachtzibbur.ui.AppViewModelFactory
 import com.sh7411usa.shliachtzibbur.ui.common.MessageText
-import com.sh7411usa.shliachtzibbur.ui.common.ReplyToken
 import com.sh7411usa.shliachtzibbur.ui.common.focusHighlight
 import com.sh7411usa.shliachtzibbur.ui.common.rememberIsTouchDevice
 import com.sh7411usa.shliachtzibbur.ui.common.toUserMessage
@@ -98,9 +109,13 @@ fun MessagesScreen(
 
     val listState = rememberLazyListState()
 
+    // Emoji reactions are pulled out of the message stream and hung on the
+    // message each one targets; everything else stays a normal row.
+    val (visibleItems, reactionsBySeq) = remember(items) { splitReactions(items) }
+
     // Resolve reply markers against the messages currently in the thread.
-    val deliveredBySeq = remember(items) {
-        items.asSequence()
+    val deliveredBySeq = remember(visibleItems) {
+        visibleItems.asSequence()
             .filterIsInstance<ConversationItem.Delivered>()
             .associateBy { it.message.seq }
     }
@@ -110,9 +125,9 @@ fun MessagesScreen(
 
     // Scroll to the newest message only when the tail changes (a new message),
     // not when older history is prepended by pagination.
-    val tailKey = items.lastOrNull()?.let { it.key() }
+    val tailKey = visibleItems.lastOrNull()?.let { it.key() }
     LaunchedEffect(tailKey) {
-        if (items.isNotEmpty()) listState.animateScrollToItem(items.lastIndex)
+        if (visibleItems.isNotEmpty()) listState.animateScrollToItem(visibleItems.lastIndex)
     }
 
     val isSystem = group?.kind == GroupKind.SYSTEM
@@ -209,7 +224,7 @@ fun MessagesScreen(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                 )
             }
-            if (items.isEmpty()) {
+            if (visibleItems.isEmpty()) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(
                         stringResource(R.string.messages_empty),
@@ -234,7 +249,7 @@ fun MessagesScreen(
                             }
                         }
                     }
-                    items(items, key = { it.key() }) { item ->
+                    items(visibleItems, key = { it.key() }) { item ->
                         when (item) {
                             is ConversationItem.Delivered -> {
                                 val reply = remember(item.message.text) {
@@ -250,7 +265,9 @@ fun MessagesScreen(
                                     markdown = settings.messagesMarkdown && !isSystem,
                                     showSeq = settings.showMessageSeq,
                                     canReply = postBlockedReason == null,
+                                    reactions = reactionsBySeq[item.message.seq].orEmpty(),
                                     onReply = { replyToSeq = item.message.seq },
+                                    onReact = { emoji -> viewModel.react(item.message.seq, emoji) },
                                 )
                             }
 
@@ -271,6 +288,71 @@ fun MessagesScreen(
 private fun ConversationItem.key(): String = when (this) {
     is ConversationItem.Delivered -> "d-${message.id}"
     is ConversationItem.Pending -> "p-${outbox.clientMessageId}"
+}
+
+/** One emoji reaction shown on the message it targets. */
+private data class Reaction(
+    val emoji: String,
+    /** The reactor's display name; null while the send is still pending. */
+    val reactor: String?,
+    /** The reactor's user id, used to keep only their most recent reaction. */
+    val reactorId: String?,
+    /** Reaction-message seq; [Long.MAX_VALUE] while pending. */
+    val seq: Long,
+    val pending: Boolean,
+)
+
+private data class SplitConversation(
+    val items: List<ConversationItem>,
+    val reactions: Map<Long, List<Reaction>>,
+)
+
+/**
+ * Splits [raw] into the rows that get their own bubble and a `targetSeq -> reactions`
+ * map. Since messages can't be un-sent, only each person's most recent reaction to
+ * a given message is kept.
+ */
+private fun splitReactions(raw: List<ConversationItem>): SplitConversation {
+    val visible = ArrayList<ConversationItem>(raw.size)
+    val byTarget = LinkedHashMap<Long, MutableList<Reaction>>()
+
+    fun add(target: Long, reaction: Reaction) {
+        byTarget.getOrPut(target) { mutableListOf() }.add(reaction)
+    }
+
+    for (item in raw) {
+        when (item) {
+            is ConversationItem.Delivered -> {
+                val target = Reactions.targetOf(item.message.text)
+                val emoji = Reactions.of(item.message.text)
+                if (target != null && emoji != null) {
+                    add(
+                        target,
+                        Reaction(emoji, item.message.displayName, item.message.senderId, item.message.seq, pending = false),
+                    )
+                } else {
+                    visible.add(item)
+                }
+            }
+
+            is ConversationItem.Pending -> {
+                val target = Reactions.targetOf(item.outbox.text)
+                val emoji = Reactions.of(item.outbox.text)
+                if (target != null && emoji != null) {
+                    add(target, Reaction(emoji, null, null, Long.MAX_VALUE, pending = true))
+                } else {
+                    visible.add(item)
+                }
+            }
+        }
+    }
+
+    val collapsed = byTarget.mapValues { (_, list) ->
+        list.groupBy { it.reactorId ?: "pending:${it.emoji}" }
+            .map { (_, perPerson) -> perPerson.maxByOrNull { it.seq }!! }
+            .sortedBy { it.seq }
+    }
+    return SplitConversation(visible, collapsed)
 }
 
 /** Name + best phone number for a contact chosen via `ACTION_PICK`, as plain text. */
@@ -318,11 +400,14 @@ private fun MessageBubble(
     markdown: Boolean,
     showSeq: Boolean,
     canReply: Boolean,
+    reactions: List<Reaction>,
     onReply: () -> Unit,
+    onReact: (String) -> Unit,
 ) {
     val clipboard = LocalClipboardManager.current
     val isTouch = rememberIsTouchDevice()
     var menuOpen by remember { mutableStateOf(false) }
+    var showEmojiPicker by remember { mutableStateOf(false) }
 
     if (isSystem) {
         MessageText(
@@ -382,6 +467,17 @@ private fun MessageBubble(
             }
             DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                 if (canReply) {
+                    QuickReactionRow(
+                        onPick = {
+                            menuOpen = false
+                            onReact(it)
+                        },
+                        onMore = {
+                            menuOpen = false
+                            showEmojiPicker = true
+                        },
+                    )
+                    HorizontalDivider()
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.messages_reply)) },
                         onClick = {
@@ -397,12 +493,156 @@ private fun MessageBubble(
                         menuOpen = false
                     },
                 )
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.messages_copy_seq, seq)) },
-                    onClick = {
-                        clipboard.setText(AnnotatedString("#$seq"))
-                        menuOpen = false
-                    },
+            }
+        }
+        if (reactions.isNotEmpty()) {
+            ReactionBar(reactions = reactions, alignEnd = isSelf)
+        }
+    }
+
+    if (showEmojiPicker) {
+        EmojiPickerDialog(
+            onPick = {
+                showEmojiPicker = false
+                onReact(it)
+            },
+            onDismiss = { showEmojiPicker = false },
+        )
+    }
+}
+
+/** The one-tap reaction row shown at the top of a message's menu. */
+@Composable
+private fun QuickReactionRow(onPick: (String) -> Unit, onMore: () -> Unit) {
+    Row(
+        Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Reactions.QUICK.forEach { emoji ->
+            Box(
+                Modifier
+                    .size(40.dp)
+                    .focusHighlight(makeFocusable = true)
+                    .clickable { onPick(emoji) },
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(emoji, fontSize = 22.sp)
+            }
+        }
+        Box(
+            Modifier
+                .size(40.dp)
+                .focusHighlight(makeFocusable = true)
+                .clickable { onMore() },
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                Icons.Filled.MoreVert,
+                contentDescription = stringResource(R.string.messages_react_more),
+            )
+        }
+    }
+}
+
+/** A full-screen-ish grid of emoji for the "more" reaction chooser. */
+@Composable
+private fun EmojiPickerDialog(onPick: (String) -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close)) }
+        },
+        title = { Text(stringResource(R.string.messages_react_pick)) },
+        text = {
+            Column(
+                Modifier
+                    .heightIn(max = 320.dp)
+                    .verticalScroll(rememberScrollState()),
+            ) {
+                Reactions.PALETTE.chunked(5).forEach { row ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        row.forEach { emoji ->
+                            Box(
+                                Modifier
+                                    .size(44.dp)
+                                    .focusHighlight(makeFocusable = true)
+                                    .clickable { onPick(emoji) },
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(emoji, fontSize = 24.sp)
+                            }
+                        }
+                    }
+                }
+            }
+        },
+    )
+}
+
+/**
+ * Reaction badges under a bubble. Collapsed they show one chip per distinct
+ * emoji with a count; tapping toggles a list of who reacted with what.
+ */
+@Composable
+private fun ReactionBar(reactions: List<Reaction>, alignEnd: Boolean) {
+    var expanded by remember { mutableStateOf(false) }
+    val youLabel = stringResource(R.string.messages_react_you)
+    val grouped = remember(reactions) {
+        reactions.groupBy { it.emoji }.entries.toList()
+    }
+    Column(
+        Modifier.padding(top = 2.dp, start = 4.dp, end = 4.dp),
+        horizontalAlignment = if (alignEnd) Alignment.End else Alignment.Start,
+    ) {
+        Row(
+            Modifier
+                .focusHighlight(makeFocusable = true)
+                .clickable { expanded = !expanded }
+                .horizontalScroll(rememberScrollState())
+                .padding(vertical = 2.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            grouped.forEach { (emoji, list) ->
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    tonalElevation = 1.dp,
+                ) {
+                    Row(
+                        Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            emoji,
+                            fontSize = 13.sp,
+                            color = if (list.any { it.pending }) {
+                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                        )
+                        if (list.size > 1) {
+                            Text(
+                                " ${list.size}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        if (expanded) {
+            grouped.forEach { (emoji, list) ->
+                val names = list.joinToString { it.reactor ?: youLabel }
+                Text(
+                    "$emoji  $names",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(vertical = 1.dp),
                 )
             }
         }
@@ -529,8 +769,17 @@ private fun MessageInputBar(
     var attachOpen by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
+    // A reply still costs its hidden `RE:<seq> ` marker against the length limit.
+    val tokenOverhead = replyingTo?.let { ReplyToken.format(it.seq, "").length } ?: 0
+    val bodyMax = (maxLength - tokenOverhead).coerceAtLeast(0)
+    val used = text.length + tokenOverhead
+    LaunchedEffect(bodyMax) {
+        if (text.length > bodyMax) text = text.take(bodyMax)
+    }
+
     fun append(snippet: String) {
-        text = (if (text.isBlank()) "" else text.trimEnd() + "\n") + snippet
+        val joined = (if (text.isBlank()) "" else text.trimEnd() + "\n") + snippet
+        text = joined.take(bodyMax)
     }
 
     fun sendNow() {
@@ -611,6 +860,20 @@ private fun MessageInputBar(
                     }
                 }
             }
+            if (text.isNotEmpty()) {
+                Text(
+                    stringResource(R.string.messages_char_count, used, maxLength),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (used >= maxLength) {
+                        MaterialTheme.colorScheme.error
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                    modifier = Modifier
+                        .align(Alignment.End)
+                        .padding(end = 12.dp),
+                )
+            }
             Row(
                 Modifier
                     .fillMaxWidth()
@@ -646,7 +909,7 @@ private fun MessageInputBar(
                 }
                 TextField(
                     value = text,
-                    onValueChange = { if (it.length <= maxLength) text = it },
+                    onValueChange = { if (it.length <= bodyMax) text = it },
                     placeholder = { Text(stringResource(R.string.messages_input_hint)) },
                     modifier = Modifier.weight(1f),
                     maxLines = 4,

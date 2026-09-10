@@ -97,11 +97,13 @@
     <string name="messages_send_failed">Not delivered — tap for options.</string>
     <string name="messages_sending">Sending…</string>
     <string name="messages_char_count">%1$d / %2$d</string>
+    <string name="messages_react_more">More reactions</string>
+    <string name="messages_react_pick">Pick a reaction</string>
+    <string name="messages_react_you">You</string>
     <string name="messages_retry">Retry</string>
     <string name="messages_delete_message">Delete</string>
     <string name="messages_too_small_generic">This group doesn\'t have enough members to post yet.</string>
     <string name="messages_send_timed_out">Message timed out.</string>
-    <string name="messages_copy_seq">Copy #%1$d</string>
     <string name="messages_attach">Attach</string>
     <string name="messages_attach_contact">Contact</string>
     <string name="messages_attach_location">Current location</string>

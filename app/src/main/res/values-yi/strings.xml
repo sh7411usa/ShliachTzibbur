@@ -12,7 +12,6 @@
     <string name="search_in_thread">זוך אין דעם שמועס</string>
     <string name="search_no_results">גאָרנישט געפֿונען.</string>
     <string name="search_section_messages">מעלדונגען</string>
-    <string name="messages_copy_seq">קאָפּיר ‎#%1$d</string>
     <string name="messages_attach">צוהעפֿטן</string>
     <string name="messages_attach_contact">קאָנטאַקט</string>
     <string name="messages_attach_location">איצטיקער אָרט</string>
@@ -134,6 +133,9 @@
     <string name="messages_send_failed">נישט צוגעשטעלט. קלאַפּט צו פּרוּוון נאָך אַ מאָל.</string>
     <string name="messages_sending">שיקט…</string>
     <string name="messages_char_count">%1$d / %2$d</string>
+    <string name="messages_react_more">מער רעאַקציעס</string>
+    <string name="messages_react_pick">קלייַב אַ רעאַקציע</string>
+    <string name="messages_react_you">איר</string>
 
     <string name="group_settings_title">גרופּע־איינשטעלונגען</string>
     <string name="group_settings_name">נאָמען</string>

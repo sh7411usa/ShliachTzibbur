@@ -7,7 +7,6 @@
     <string name="search_in_thread">חיפוש בשיחה זו</string>
     <string name="search_no_results">לא נמצא דבר.</string>
     <string name="search_section_messages">הודעות</string>
-    <string name="messages_copy_seq">העתק ‎#%1$d</string>
     <string name="messages_attach">צירוף</string>
     <string name="messages_attach_contact">איש קשר</string>
     <string name="messages_attach_location">מיקום נוכחי</string>
@@ -129,6 +128,9 @@
     <string name="messages_send_failed">לא נשלח. הקש כדי לנסות שוב.</string>
     <string name="messages_sending">שולח…</string>
     <string name="messages_char_count">%1$d / %2$d</string>
+    <string name="messages_react_more">תגובות נוספות</string>
+    <string name="messages_react_pick">בחר תגובה</string>
+    <string name="messages_react_you">את/ה</string>
 
     <string name="group_settings_title">הגדרות הקבוצה</string>
     <string name="group_settings_name">שם</string>

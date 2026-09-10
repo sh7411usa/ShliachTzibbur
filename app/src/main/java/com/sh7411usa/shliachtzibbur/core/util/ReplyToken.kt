@@ -1,4 +1,4 @@
-package com.sh7411usa.shliachtzibbur.ui.common
+package com.sh7411usa.shliachtzibbur.core.util
 
 /**
  * The Tzibbur service has no native "reply" concept, so a reply is encoded as a

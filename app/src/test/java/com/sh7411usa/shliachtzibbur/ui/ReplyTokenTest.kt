@@ -1,6 +1,6 @@
 package com.sh7411usa.shliachtzibbur.ui
 
-import com.sh7411usa.shliachtzibbur.ui.common.ReplyToken
+import com.sh7411usa.shliachtzibbur.core.util.ReplyToken
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test

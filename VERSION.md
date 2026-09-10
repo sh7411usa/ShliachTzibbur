@@ -6,6 +6,31 @@ stays in sync with `app/build.gradle.kts`.
 
 ---
 
+## 0.10 — versionCode 11 — 2026-09-10
+
+Emoji reactions, plus composer polish.
+
+- **Character counter** in the composer (`used / 1000`). A reply's hidden
+  `RE:<seq> ` marker counts toward the limit, and the field stops accepting
+  input once the *effective* length (marker + body) hits the maximum.
+- **Message menu**: "Copy #<seq>" removed. Added a one-tap reaction row —
+  👍 ❤️ 😂 😮 😢 — and a "⋮" that opens a full emoji chooser.
+- **Emoji reactions**: a reaction is sent as an `RE:<seq> <emoji>` reply whose
+  body is only emoji (new `Reactions` helper detects this). Instead of a bubble,
+  the emoji is shown as a badge on the message it reacts to. Badges collapse to
+  one chip per emoji with a count; tapping the row expands to show who reacted
+  with what. Because the service can't un-send a message, only each person's
+  most recent reaction to a message is shown.
+- Reaction messages don't become a group's "last message" preview and don't add
+  to its unread count.
+- `ReplyToken` moved from `ui.common` to `core.util` (now used by the data layer
+  too).
+
+### Deferred
+- Removing your own reaction (needs message deletion, which the API doesn't
+  support).
+- Tapping a quoted preview to scroll to the original message.
+
 ## 0.9 — versionCode 10 — 2026-09-10
 
 Replies in the conversation view.

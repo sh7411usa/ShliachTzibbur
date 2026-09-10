@@ -7,7 +7,6 @@
     <string name="search_in_thread">Buscar en esta conversación</string>
     <string name="search_no_results">No se encontró nada.</string>
     <string name="search_section_messages">Mensajes</string>
-    <string name="messages_copy_seq">Copiar n.º %1$d</string>
     <string name="messages_attach">Adjuntar</string>
     <string name="messages_attach_contact">Contacto</string>
     <string name="messages_attach_location">Ubicación actual</string>
@@ -129,6 +128,9 @@
     <string name="messages_system_readonly">Este es un hilo del sistema de solo lectura.</string>
     <string name="messages_sending">Enviando…</string>
     <string name="messages_char_count">%1$d / %2$d</string>
+    <string name="messages_react_more">Más reacciones</string>
+    <string name="messages_react_pick">Elige una reacción</string>
+    <string name="messages_react_you">Tú</string>
 
     <string name="group_settings_title">Ajustes del grupo</string>
     <string name="group_settings_name">Nombre</string>

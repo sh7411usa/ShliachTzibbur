@@ -7,6 +7,7 @@ import com.sh7411usa.shliachtzibbur.core.model.ConversationItem
 import com.sh7411usa.shliachtzibbur.core.model.Group
 import com.sh7411usa.shliachtzibbur.core.result.ApiException
 import com.sh7411usa.shliachtzibbur.core.result.ApiResult
+import com.sh7411usa.shliachtzibbur.core.util.ReplyToken
 import com.sh7411usa.shliachtzibbur.data.prefs.AppSettings
 import com.sh7411usa.shliachtzibbur.data.prefs.SessionStore
 import com.sh7411usa.shliachtzibbur.data.prefs.SettingsStore
@@ -143,6 +144,9 @@ class MessagesViewModel(
             messageRepository.refreshLatest(groupId)
         }
     }
+
+    /** React to message [targetSeq] with [emoji]; delivered as an `RE:<seq> <emoji>` reply. */
+    fun react(targetSeq: Long, emoji: String) = send(ReplyToken.format(targetSeq, emoji))
 
     fun retry(clientMessageId: String) {
         viewModelScope.launch { messageRepository.retry(clientMessageId) }

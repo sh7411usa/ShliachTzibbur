@@ -10,6 +10,7 @@ import com.sh7411usa.shliachtzibbur.core.result.ErrorType
 import com.sh7411usa.shliachtzibbur.core.result.apiCatching
 import com.sh7411usa.shliachtzibbur.core.util.Ids
 import com.sh7411usa.shliachtzibbur.core.util.Log
+import com.sh7411usa.shliachtzibbur.core.util.Reactions
 import com.sh7411usa.shliachtzibbur.data.local.dao.GroupDao
 import com.sh7411usa.shliachtzibbur.data.local.dao.MessageDao
 import com.sh7411usa.shliachtzibbur.data.local.dao.OutboxDao
@@ -206,7 +207,12 @@ class MessageRepository(
         val distinct = messages.distinctBy { it.id }.filter { it.groupId == groupId || it.groupId.isBlank() }
         messageDao.upsert(distinct.map { it.copy(groupId = groupId).toEntity() })
         distinct.mapNotNull { it.clientMessageId }.forEach { outboxDao.delete(it) }
-        val newest = distinct.maxByOrNull { it.seq } ?: return
+        // Emoji reactions are shown on the message they react to, not as their own
+        // row, so they must not become a group's "last message" or bump its unread
+        // count. Fall back to the real message they follow.
+        val newest = distinct
+            .filter { Reactions.of(it.text) == null }
+            .maxByOrNull { it.seq } ?: return
         groupDao.updateLastMessage(
             id = groupId,
             seq = newest.seq,
