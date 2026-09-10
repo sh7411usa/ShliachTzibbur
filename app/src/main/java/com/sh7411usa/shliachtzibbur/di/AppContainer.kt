@@ -77,6 +77,12 @@ class AppContainer(context: Context) {
             groupDao = database.groupDao(),
             crypto = encryptionStore,
             selfUserId = { sessionStore.session.first()?.userId },
+            adminIds = { groupId ->
+                database.memberDao().observeForGroup(groupId).first()
+                    .filter { it.role.equals("admin", ignoreCase = true) }
+                    .map { it.userId }
+                    .toSet()
+            },
         )
     }
     val memberRepository by lazy { MemberRepository(api, database.memberDao()) }

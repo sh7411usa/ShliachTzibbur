@@ -200,6 +200,8 @@
     <string name="enc_tag_disabled_generic">פֿאַרשליסלונג איז אָפּגעשטעלט געוואָרן</string>
     <string name="enc_tag_key_changed_generic">דער פֿאַרשליסלונג־שליסל איז געביטן געוואָרן</string>
     <string name="enc_create_label">פֿאַרשליסל די דאָזיקע גרופּע</string>
+    <string name="enc_key_share_label">שיק דעם פֿאַרשליסלונג־שליסל מיט אַן SMS צו נײַע מיטגלידער אויף Tzibbur</string>
+    <string name="enc_key_sms">איר זענט צוגעלייגט געוואָרן צו דער פֿאַרשליסלטער גרופּע \"%1$s\" אויף Shliach Tzibbur. עפֿן די אַפּ, גיי צו יענער גרופּע ← פֿאַרשליסלונג ← לייג צו אַ שליסל, און פּעסט דאָס:\n%2$s</string>
 
     <string name="group_settings_title">גרופּע־איינשטעלונגען</string>
     <string name="group_settings_name">נאָמען</string>

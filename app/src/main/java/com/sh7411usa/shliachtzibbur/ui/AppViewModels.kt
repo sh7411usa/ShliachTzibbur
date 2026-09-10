@@ -107,6 +107,8 @@ object AppViewModelFactory {
                 savedStateHandle = createSavedStateHandle(),
                 contactsRepository = container.contactsRepository,
                 memberRepository = container.memberRepository,
+                groupRepository = container.groupRepository,
+                cryptoStore = container.encryptionStore,
             )
         }
         initializer {

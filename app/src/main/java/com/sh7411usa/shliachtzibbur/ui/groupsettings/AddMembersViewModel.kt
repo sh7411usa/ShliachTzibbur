@@ -6,8 +6,10 @@ import androidx.lifecycle.viewModelScope
 import com.sh7411usa.shliachtzibbur.core.model.AddMembersResult
 import com.sh7411usa.shliachtzibbur.core.result.ApiException
 import com.sh7411usa.shliachtzibbur.core.result.ApiResult
+import com.sh7411usa.shliachtzibbur.data.prefs.GroupCryptoSource
 import com.sh7411usa.shliachtzibbur.data.repo.ContactsRepository
 import com.sh7411usa.shliachtzibbur.data.repo.DeviceContact
+import com.sh7411usa.shliachtzibbur.data.repo.GroupRepository
 import com.sh7411usa.shliachtzibbur.data.repo.MemberRepository
 import com.sh7411usa.shliachtzibbur.ui.NavArg
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,6 +34,13 @@ data class AddMembersUiState(
     val working: Boolean = false,
     val result: AddMembersResult? = null,
     val error: ApiException? = null,
+    /** Encryption context for the key-share offer. */
+    val encrypted: Boolean = false,
+    val groupName: String = "",
+    val keyHex: String? = null,
+    val shareKey: Boolean = true,
+    /** After a successful add: registered new members who can be SMS'd the key. */
+    val keyShareTargets: List<KeyShareTarget> = emptyList(),
 ) {
     val totalToAdd: Int get() = selected.size + typed.size
 
@@ -41,10 +50,15 @@ data class AddMembersUiState(
         }
 }
 
+/** A newly-added member who can be sent the encryption key by SMS. */
+data class KeyShareTarget(val name: String, val e164: String)
+
 class AddMembersViewModel(
     savedStateHandle: SavedStateHandle,
     private val contactsRepository: ContactsRepository,
     private val memberRepository: MemberRepository,
+    private val groupRepository: GroupRepository,
+    private val cryptoStore: GroupCryptoSource,
 ) : ViewModel() {
 
     val groupId: String = requireNotNull(savedStateHandle[NavArg.GROUP_ID])
@@ -80,11 +94,24 @@ class AddMembersViewModel(
             } else {
                 emptyList()
             }
+            val gc = cryptoStore.crypto(groupId).first()
+            val name = groupRepository.group(groupId).first()?.name.orEmpty()
             _state.update {
-                it.copy(loading = false, contacts = contacts, existingMembers = existing)
+                it.copy(
+                    loading = false,
+                    contacts = contacts,
+                    existingMembers = existing,
+                    encrypted = gc.enabled && gc.activeKey != null,
+                    keyHex = gc.activeKey?.hex,
+                    groupName = name,
+                )
             }
         }
     }
+
+    fun setShareKey(share: Boolean) = _state.update { it.copy(shareKey = share) }
+
+    fun clearKeyShareTargets() = _state.update { it.copy(keyShareTargets = emptyList()) }
 
     fun setQuery(q: String) = _state.update { it.copy(query = q) }
 
@@ -115,7 +142,16 @@ class AddMembersViewModel(
         _state.update { it.copy(working = true, error = null) }
         viewModelScope.launch {
             when (val result = memberRepository.add(groupId, phones, region)) {
-                is ApiResult.Success -> _state.update { it.copy(working = false, result = result.value) }
+                is ApiResult.Success -> _state.update { s ->
+                    val targets = if (s.encrypted && s.shareKey && s.keyHex != null) {
+                        result.value.added
+                            .mapNotNull { m -> m.phoneE164?.let { KeyShareTarget(m.displayName, it) } }
+                    } else {
+                        emptyList()
+                    }
+                    s.copy(working = false, result = result.value, keyShareTargets = targets)
+                }
+
                 is ApiResult.Failure -> _state.update { it.copy(working = false, error = result.error) }
             }
         }

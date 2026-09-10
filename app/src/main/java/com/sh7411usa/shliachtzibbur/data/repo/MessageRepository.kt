@@ -49,6 +49,8 @@ class MessageRepository(
     private val groupDao: GroupDao,
     private val crypto: GroupCryptoSource = NoEncryption,
     private val selfUserId: suspend () -> String? = { null },
+    /** Admin user ids for a group — used to verify encryption/pin control messages. */
+    private val adminIds: suspend (groupId: String) -> Set<String> = { emptySet() },
     /** A send that is neither confirmed nor rejected within this window is marked FAILED. */
     private val sendTimeoutMs: Long = 20_000L,
 ) {
@@ -312,15 +314,21 @@ class MessageRepository(
         messageDao.upsert(distinct.map { it.copy(groupId = groupId).toEntity() })
         distinct.mapNotNull { it.clientMessageId }.forEach { outboxDao.delete(it) }
 
-        // Learn the group's encryption state from what arrived.
+        // Learn the group's encryption state from what arrived. An "encryption on/off"
+        // service message is only honoured from a group admin (a member must not be
+        // able to turn other clients' encryption off and make them send plaintext);
+        // seeing an actual ciphertext message is a safe fallback that enables it.
         val gc = crypto.crypto(groupId).first()
+        val admins = adminIds(groupId)
         distinct.sortedBy { it.seq }.forEach { m ->
+            val svc = ServiceMessage.parse(m.text)
+            val fromAdmin = m.senderId != null && m.senderId in admins
             when {
-                ServiceMessage.parse(m.text) == ServiceMessage.EncryptionOn ->
+                svc == ServiceMessage.EncryptionOn && fromAdmin ->
                     crypto.setEnabled(groupId, true, sinceSeq = m.seq)
-                ServiceMessage.parse(m.text) == ServiceMessage.EncryptionOff ->
+                svc == ServiceMessage.EncryptionOff && fromAdmin ->
                     crypto.setEnabled(groupId, false)
-                MessageCrypto.isCipherText(m.text) && !gc.enabled ->
+                svc == null && MessageCrypto.isCipherText(m.text) && !gc.enabled ->
                     crypto.setEnabled(groupId, true, sinceSeq = m.seq)
                 else -> Unit
             }

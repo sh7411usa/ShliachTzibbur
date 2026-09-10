@@ -69,8 +69,28 @@ fun AddMembersScreen(
         ActivityResultContracts.RequestPermission(),
     ) { granted -> viewModel.onPermissionResult(granted) }
 
+    val keySmsBody = if (state.keyHex != null) {
+        stringResource(R.string.enc_key_sms, state.groupName, state.keyHex!!)
+    } else {
+        ""
+    }
     LaunchedEffect(state.result) {
-        if (state.result != null) onDone()
+        if (state.result != null) {
+            val targets = state.keyShareTargets
+            if (targets.isNotEmpty()) {
+                runCatching {
+                    val to = targets.joinToString(",") { it.e164 }
+                    context.startActivity(
+                        android.content.Intent(
+                            android.content.Intent.ACTION_SENDTO,
+                            android.net.Uri.parse("smsto:$to"),
+                        ).putExtra("sms_body", keySmsBody),
+                    )
+                }
+                viewModel.clearKeyShareTargets()
+            }
+            onDone()
+        }
     }
 
     fun commitManual() {
@@ -166,6 +186,24 @@ fun AddMembersScreen(
                     modifier = Modifier.focusHighlight(makeFocusable = true),
                 ) {
                     Text(stringResource(R.string.action_add))
+                }
+            }
+
+            if (state.encrypted) {
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .focusHighlight(makeFocusable = true)
+                        .clickable { viewModel.setShareKey(!state.shareKey) }
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Checkbox(checked = state.shareKey, onCheckedChange = viewModel::setShareKey)
+                    Text(
+                        stringResource(R.string.enc_key_share_label),
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(start = 8.dp),
+                    )
                 }
             }
 

@@ -124,8 +124,12 @@ fun deriveConversation(
         val vote = PollToken.parse(text)
         when {
             Reactions.targetOf(text) != null -> Unit
-            ServiceMessage.parse(text) != null ->
-                rows += ConvRow.Control(serviceKind(ServiceMessage.parse(text)!!), m.displayName, null, m.seq)
+            ServiceMessage.parse(text) != null -> {
+                // Only honour / show an encryption service message from an admin.
+                if (m.senderId != null && m.senderId in adminIds) {
+                    rows += ConvRow.Control(serviceKind(ServiceMessage.parse(text)!!), m.displayName, null, m.seq)
+                }
+            }
             PinControl.parse(text) != null -> {
                 val pc = PinControl.parse(text)!!
                 if (m.senderId != null && m.senderId in adminIds) {

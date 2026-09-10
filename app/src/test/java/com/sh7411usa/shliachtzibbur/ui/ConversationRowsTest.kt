@@ -2,6 +2,7 @@ package com.sh7411usa.shliachtzibbur.ui
 
 import com.sh7411usa.shliachtzibbur.core.model.ConversationItem
 import com.sh7411usa.shliachtzibbur.core.model.Message
+import com.sh7411usa.shliachtzibbur.core.model.ServiceMessage
 import com.sh7411usa.shliachtzibbur.ui.messages.ControlKind
 import com.sh7411usa.shliachtzibbur.ui.messages.ConvRow
 import com.sh7411usa.shliachtzibbur.ui.messages.deriveConversation
@@ -58,6 +59,19 @@ class ConversationRowsTest {
         // The vote message is hidden; the END shows as a tag.
         assertNull(d.rows.filterIsInstance<ConvRow.Msg>().firstOrNull { it.item.message.seq == 6L })
         assertTrue(d.rows.any { it is ConvRow.Control && it.kind == ControlKind.PollEnded })
+    }
+
+    @Test
+    fun `encryption service tags show only from an admin`() {
+        val fromMember = derive(
+            listOf(delivered(1, "bob", ServiceMessage.body(ServiceMessage.EncryptionOn))),
+        )
+        assertTrue(fromMember.rows.none { it is ConvRow.Control })
+
+        val fromAdmin = derive(
+            listOf(delivered(1, "admin", ServiceMessage.body(ServiceMessage.EncryptionOn))),
+        )
+        assertTrue(fromAdmin.rows.any { it is ConvRow.Control && it.kind == ControlKind.EncOn })
     }
 
     @Test

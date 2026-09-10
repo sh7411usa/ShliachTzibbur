@@ -195,6 +195,8 @@
     <string name="enc_tag_disabled_generic">ההצפנה כובתה</string>
     <string name="enc_tag_key_changed_generic">מפתח ההצפנה שונה</string>
     <string name="enc_create_label">הצפן את הקבוצה הזו</string>
+    <string name="enc_key_share_label">שלח את מפתח ההצפנה ב־SMS לחברים החדשים ב־Tzibbur</string>
+    <string name="enc_key_sms">נוספת לקבוצה המוצפנת \"%1$s\" ב־Shliach Tzibbur. פתח את האפליקציה, עבור לקבוצה ← הצפנה ← הוספת מפתח, והדבק את זה:\n%2$s</string>
 
     <string name="group_settings_title">הגדרות הקבוצה</string>
     <string name="group_settings_name">שם</string>

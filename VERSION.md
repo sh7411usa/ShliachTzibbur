@@ -6,6 +6,20 @@ stays in sync with `app/build.gradle.kts`.
 
 ---
 
+## 0.13 — versionCode 14 — 2026-09-10
+
+Encryption trust + key hand-off.
+
+- **Admin-verified encryption control**: an "encryption on/off" service message
+  is only honoured (and only rendered as a tag) when its sender is a group admin
+  — a member can no longer flip other clients' encryption off. Seeing an actual
+  ciphertext message still enables encryption locally as a fallback.
+  `MessageRepository` takes an `adminIds(groupId)` lookup for this.
+- **Share the key when adding members**: on the Add members screen for an
+  encrypted group, a checkbox (on by default) texts the current key to the
+  newly-added registered Tzibbur users, with instructions to paste it into
+  that group's Encryption screen.
+
 ## 0.12 — versionCode 13 — 2026-09-10
 
 Polls, pinned messages, stickers and conversation polish.

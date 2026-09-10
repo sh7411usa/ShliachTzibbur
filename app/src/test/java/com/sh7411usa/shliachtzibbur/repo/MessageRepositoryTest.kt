@@ -4,8 +4,10 @@ import com.sh7411usa.shliachtzibbur.core.crypto.AesGcmSeqScheme
 import com.sh7411usa.shliachtzibbur.core.crypto.GroupKey
 import com.sh7411usa.shliachtzibbur.core.crypto.KeyHex
 import com.sh7411usa.shliachtzibbur.core.model.ConversationItem
+import com.sh7411usa.shliachtzibbur.core.model.Message
 import com.sh7411usa.shliachtzibbur.core.model.MessageSecurity
 import com.sh7411usa.shliachtzibbur.core.model.OutboxState
+import com.sh7411usa.shliachtzibbur.core.model.ServiceMessage
 import com.sh7411usa.shliachtzibbur.core.net.HttpEngine
 import com.sh7411usa.shliachtzibbur.core.net.TzibburApi
 import com.sh7411usa.shliachtzibbur.core.result.ApiResult
@@ -29,6 +31,7 @@ import okhttp3.mockwebserver.RecordedRequest
 import okhttp3.mockwebserver.SocketPolicy
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -87,6 +90,7 @@ class MessageRepositoryTest {
         timeoutMs: Long = 5_000L,
         crypto: GroupCryptoSource = NoEncryption,
         selfUserId: String? = "u1",
+        admins: Set<String> = emptySet(),
     ): MessageRepository {
         val client = OkHttpClient.Builder()
             .callTimeout(10, TimeUnit.SECONDS)
@@ -98,6 +102,7 @@ class MessageRepositoryTest {
             api, messageDao, outboxDao, groupDao,
             crypto = crypto,
             selfUserId = { selfUserId },
+            adminIds = { admins },
             sendTimeoutMs = timeoutMs,
         )
     }
@@ -212,6 +217,23 @@ class MessageRepositoryTest {
         assertEquals(MessageSecurity.Secure, delivered.security)
         assertEquals("hi there", delivered.plaintext)
         assertEquals("hi there", delivered.displayText)
+    }
+
+    @Test
+    fun `encryption-on service message is honoured only from an admin`() = runBlocking {
+        val fromMember = FakeGroupCryptoSource()
+        repository(crypto = fromMember, admins = setOf("boss")).applyIncoming(
+            "g1",
+            listOf(Message("s1", "g1", 3, "bob", "Bob: ${ServiceMessage.body(ServiceMessage.EncryptionOn)}", null, null)),
+        )
+        assertFalse(fromMember.state.value.enabled)
+
+        val fromAdmin = FakeGroupCryptoSource()
+        repository(crypto = fromAdmin, admins = setOf("boss")).applyIncoming(
+            "g1",
+            listOf(Message("s2", "g1", 3, "boss", "Boss: ${ServiceMessage.body(ServiceMessage.EncryptionOn)}", null, null)),
+        )
+        assertTrue(fromAdmin.state.value.enabled)
     }
 
     @Test
