@@ -99,8 +99,18 @@ fun ContactsScreen(
                     title = stringResource(R.string.contacts_empty),
                 )
 
-                else -> LazyColumn(Modifier.fillMaxSize()) {
-                    items(state.contacts, key = { it.e164 }) { contact ->
+                else -> {
+                OutlinedTextField(
+                    value = state.query,
+                    onValueChange = viewModel::setQuery,
+                    label = { Text(stringResource(R.string.contacts_search_hint)) },
+                    singleLine = true,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                )
+                LazyColumn(Modifier.fillMaxSize()) {
+                    items(state.filteredContacts, key = { it.e164 }) { contact ->
                         val inGroups = state.membership[contact.e164].orEmpty()
                         ContactRow(
                             contact = contact,
@@ -112,6 +122,7 @@ fun ContactsScreen(
                         )
                         ThinDivider(Modifier.padding(start = 16.dp))
                     }
+                }
                 }
             }
         }

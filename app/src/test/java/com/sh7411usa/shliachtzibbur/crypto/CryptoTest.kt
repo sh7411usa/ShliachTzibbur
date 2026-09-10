@@ -117,4 +117,15 @@ class MessageCryptoTest {
         val token = AesGcmSeqScheme.encrypt(key.hex, 3, "u1", "x")
         assertEquals(CryptoOutcome.Undecryptable, MessageCrypto.decrypt(token, 3, "u1", emptyList()))
     }
+
+    @Test
+    fun `projectedCipherLength matches the real token length`() {
+        listOf("", "hi", "a".repeat(300), "über cool ☕ message with emoji 🎉", "x".repeat(700)).forEach { pt ->
+            assertEquals(
+                pt,
+                AesGcmSeqScheme.encrypt(key.hex, 7, "u1", pt).length,
+                MessageCrypto.projectedCipherLength(pt),
+            )
+        }
+    }
 }

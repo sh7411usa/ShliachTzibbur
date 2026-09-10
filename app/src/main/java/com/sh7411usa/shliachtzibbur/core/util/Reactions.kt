@@ -74,6 +74,23 @@ object Reactions {
         return emojiCount > 0
     }
 
+    /**
+     * The emoji if [text] is a short emoji-only message (1–3 emoji, no other
+     * characters) — rendered as a large sticker instead of a bubble — else null.
+     */
+    fun singleEmojiOrNull(text: String): String? {
+        val s = text.trim()
+        if (s.isEmpty() || !isEmojiOnly(s)) return null
+        var index = 0
+        var scalars = 0
+        while (index < s.length) {
+            val cp = s.codePointAt(index)
+            index += Character.charCount(cp)
+            if (isEmojiScalar(cp)) scalars++
+        }
+        return if (scalars in 1..3) s else null
+    }
+
     /** Deliberately generous: reaction text only ever comes from our own picker. */
     private fun isEmojiScalar(cp: Int): Boolean =
         cp in 0x1F000..0x1FFFF ||   // supplementary symbol / pictograph planes

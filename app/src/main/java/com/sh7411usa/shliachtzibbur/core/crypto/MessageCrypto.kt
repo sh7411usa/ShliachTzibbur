@@ -52,4 +52,16 @@ object MessageCrypto {
     /** Encrypts [plaintext] with [key] for the [anticipatedSeq] the send will land on. */
     fun encrypt(plaintext: String, anticipatedSeq: Long, senderId: String?, key: GroupKey): String =
         AesGcmSeqScheme.encrypt(key.hex, anticipatedSeq, senderId, plaintext)
+
+    /**
+     * The exact length of the `$E1:` token that [plaintext] would produce, without
+     * actually encrypting — for a live "characters remaining" count. Matches
+     * `encrypt(...).length`.
+     */
+    fun projectedCipherLength(plaintext: String): Int {
+        // GCM output = ("!" + plaintext) bytes + 16-byte tag; then base64 (no padding).
+        val cipherBytes = ("!" + plaintext).toByteArray(Charsets.UTF_8).size + 16
+        val base64Len = (cipherBytes + 2) / 3 * 4 - ((3 - cipherBytes % 3) % 3)
+        return AesGcmSeqScheme.tokenPrefix.length + base64Len
+    }
 }

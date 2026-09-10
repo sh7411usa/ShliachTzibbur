@@ -48,6 +48,7 @@ object AppViewModelFactory {
             GroupsViewModel(
                 groupRepository = container.groupRepository,
                 messageRepository = container.messageRepository,
+                cryptoStore = container.encryptionStore,
             )
         }
         initializer {
@@ -55,7 +56,6 @@ object AppViewModelFactory {
                 savedStateHandle = createSavedStateHandle(),
                 groupRepository = container.groupRepository,
                 memberRepository = container.memberRepository,
-                messageRepository = container.messageRepository,
                 crypto = container.encryptionStore,
             )
         }
@@ -73,6 +73,7 @@ object AppViewModelFactory {
                 messageRepository = container.messageRepository,
                 profileRepository = container.profileRepository,
                 syncManager = container.syncManager,
+                memberRepository = container.memberRepository,
                 sessionStore = container.sessionStore,
                 settingsStore = container.settingsStore,
                 crypto = container.encryptionStore,

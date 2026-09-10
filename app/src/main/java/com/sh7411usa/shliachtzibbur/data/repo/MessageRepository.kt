@@ -12,8 +12,12 @@ import com.sh7411usa.shliachtzibbur.core.result.ApiException
 import com.sh7411usa.shliachtzibbur.core.result.ApiResult
 import com.sh7411usa.shliachtzibbur.core.result.ErrorType
 import com.sh7411usa.shliachtzibbur.core.result.apiCatching
+import com.sh7411usa.shliachtzibbur.core.model.Role
 import com.sh7411usa.shliachtzibbur.core.util.Ids
 import com.sh7411usa.shliachtzibbur.core.util.Log
+import com.sh7411usa.shliachtzibbur.core.util.PinControl
+import com.sh7411usa.shliachtzibbur.core.util.PollSpec
+import com.sh7411usa.shliachtzibbur.core.util.PollToken
 import com.sh7411usa.shliachtzibbur.core.util.Reactions
 import com.sh7411usa.shliachtzibbur.data.local.dao.GroupDao
 import com.sh7411usa.shliachtzibbur.data.local.dao.MessageDao
@@ -121,17 +125,48 @@ class MessageRepository(
         }
         // An encrypted group with no key on this device must not leak plaintext.
         val gc = crypto.crypto(groupId).first()
-        if (gc.enabled && gc.activeKey == null && ServiceMessage.parse(trimmed) == null) {
+        val isControl = ServiceMessage.parse(trimmed) != null || PinControl.parse(trimmed) != null
+        if (gc.enabled && gc.activeKey == null && !isControl) {
             return ApiResult.Failure(
                 ApiException(ErrorType.ENCRYPTION_LOCKED, status = 0, detail = "No encryption key"),
+            )
+        }
+        // The server rejects bodies over messageMaxLength; check the *wire* body.
+        if (projectedWireLength(gc, trimmed, isControl) > MAX_BODY_LENGTH) {
+            return ApiResult.Failure(
+                ApiException(ErrorType.INVALID_MESSAGE, status = 0, detail = "Message too long"),
             )
         }
         return enqueue(groupId, trimmed)
     }
 
+    private fun projectedWireLength(gc: GroupCrypto, plaintext: String, isControl: Boolean): Int =
+        if (gc.enabled && gc.activeKey != null && !isControl && !MessageCrypto.isCipherText(plaintext)) {
+            MessageCrypto.projectedCipherLength(plaintext)
+        } else {
+            plaintext.length
+        }
+
     /** Send an in-band coordination message (encryption on/off, key changed). Always plaintext. */
     suspend fun sendServiceMessage(groupId: String, kind: ServiceMessage): ApiResult<Unit> =
         enqueue(groupId, ServiceMessage.body(kind))
+
+    /** Send a pin / unpin control message. Always plaintext. */
+    suspend fun sendPinControl(groupId: String, control: PinControl): ApiResult<Unit> =
+        enqueue(groupId, PinControl.body(control))
+
+    /**
+     * If an admin turned encryption on for a group that didn't yet have 3 members,
+     * announce it now (once membership reaches 3). No-op otherwise.
+     */
+    suspend fun announcePendingEncryption(groupId: String) {
+        val gc = crypto.crypto(groupId).first()
+        if (!gc.enabled || !gc.pendingAnnounce) return
+        val group = groupDao.find(groupId) ?: return
+        if (Role.fromWire(group.role) != Role.ADMIN || group.memberCount < 3) return
+        crypto.setEnabled(groupId, enabled = true, pendingAnnounce = false)
+        sendServiceMessage(groupId, ServiceMessage.EncryptionOn)
+    }
 
     private suspend fun enqueue(groupId: String, text: String): ApiResult<Unit> {
         val clientMessageId = Ids.newUuid()
@@ -249,7 +284,11 @@ class MessageRepository(
      * equality signals "not encrypted" to the caller's log line).
      */
     private suspend fun encryptForSend(groupId: String, clientMessageId: String, text: String): String {
-        if (ServiceMessage.parse(text) != null || MessageCrypto.isCipherText(text)) return text
+        if (ServiceMessage.parse(text) != null || PinControl.parse(text) != null ||
+            MessageCrypto.isCipherText(text)
+        ) {
+            return text
+        }
         val gc = crypto.crypto(groupId).first()
         val key = gc.activeKey?.takeIf { gc.enabled } ?: return text
         // The server assigns the real seq; anticipate it and let the receiver's
@@ -287,24 +326,33 @@ class MessageRepository(
             }
         }
 
-        // Reactions and service messages are shown differently, not as their own
-        // row, so they must not become a group's "last message" or bump unread.
-        val newest = distinct
-            .filter { Reactions.of(it.text) == null && ServiceMessage.parse(it.text) == null }
-            .maxByOrNull { it.seq } ?: return
+        // Reactions, service/control and poll-vote messages are shown differently,
+        // not as their own row, so they must not become a group's "last message".
         val gcNow = crypto.crypto(groupId).first()
-        val preview = when (
-            val outcome = MessageCrypto.decrypt(newest.text, newest.seq, newest.senderId, gcNow.keysForDecrypt)
+        fun shownText(m: Message): String? = when (
+            val outcome = MessageCrypto.decrypt(m.text, m.seq, m.senderId, gcNow.keysForDecrypt)
         ) {
-            is CryptoOutcome.Decrypted -> outcome.plaintext.take(140)
+            is CryptoOutcome.Decrypted -> outcome.plaintext
             CryptoOutcome.Undecryptable -> ENCRYPTED_PREVIEW
-            CryptoOutcome.Plain -> newest.text.take(140)
+            CryptoOutcome.Plain -> m.text
         }
+        val newestEntry = distinct
+            .sortedByDescending { it.seq }
+            .firstNotNullOfOrNull { m ->
+                val shown = shownText(m) ?: return@firstNotNullOfOrNull null
+                when {
+                    Reactions.of(shown) != null -> null
+                    ServiceMessage.parse(shown) != null || PinControl.parse(shown) != null -> null
+                    PollToken.parse(shown) != null -> null
+                    PollSpec.isPoll(shown) -> m to ("📊 " + (PollSpec.parse(shown)?.question ?: "")).take(140)
+                    else -> m to shown.take(140)
+                }
+            } ?: return
         groupDao.updateLastMessage(
             id = groupId,
-            seq = newest.seq,
-            preview = preview,
-            createdAt = newest.createdAt,
+            seq = newestEntry.first.seq,
+            preview = newestEntry.second,
+            createdAt = newestEntry.first.createdAt,
         )
     }
 
@@ -366,5 +414,6 @@ class MessageRepository(
     companion object {
         const val ERROR_TIMEOUT = "send_timed_out"
         const val ENCRYPTED_PREVIEW = "🔒"
+        const val MAX_BODY_LENGTH = 1000
     }
 }

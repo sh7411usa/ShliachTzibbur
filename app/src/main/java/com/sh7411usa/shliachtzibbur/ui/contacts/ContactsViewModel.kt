@@ -25,7 +25,17 @@ data class ContactsUiState(
     val membership: Map<String, Set<String>> = emptyMap(),
     val error: ApiException? = null,
     val working: Boolean = false,
-)
+    val query: String = "",
+) {
+    val filteredContacts: List<DeviceContact>
+        get() {
+            val q = query.trim()
+            if (q.isEmpty()) return contacts
+            return contacts.filter {
+                it.name.contains(q, ignoreCase = true) || it.e164.contains(q)
+            }
+        }
+}
 
 class ContactsViewModel(
     private val contactsRepository: ContactsRepository,
@@ -93,6 +103,8 @@ class ContactsViewModel(
             }
         }
     }
+
+    fun setQuery(q: String) = _state.update { it.copy(query = q) }
 
     fun clearError() = _state.update { it.copy(error = null) }
 }

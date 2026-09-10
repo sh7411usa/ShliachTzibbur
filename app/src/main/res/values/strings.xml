@@ -111,6 +111,38 @@
     <string name="messages_replying_to">Replying to %1$s</string>
     <string name="messages_reply_prefix">Message #%1$d</string>
     <string name="messages_reply_unavailable">Original message unavailable</string>
+    <string name="messages_scroll_to_latest">Scroll to latest</string>
+    <string name="control_someone">Someone</string>
+
+    <!-- Pinned messages -->
+    <string name="pin_action_pin">Pin</string>
+    <string name="pin_action_unpin">Unpin</string>
+    <string name="pin_tag_pinned">%1$s pinned a message</string>
+    <string name="pin_tag_unpinned">%1$s unpinned a message</string>
+    <string name="pin_banner_title">Pinned</string>
+    <string name="pin_banner_unavailable">Pinned message</string>
+
+    <!-- Polls -->
+    <string name="poll_new_title">Poll</string>
+    <string name="poll_question">Question</string>
+    <string name="poll_option">Option %1$d</string>
+    <string name="poll_add_option">Add option</string>
+    <string name="poll_create">Create</string>
+    <string name="poll_started_by">%1$s started a poll</string>
+    <string name="poll_tag_ended">%1$s ended a poll</string>
+    <string name="poll_end">End poll</string>
+    <string name="poll_end_confirm">End this poll now? Everyone will see the results.</string>
+    <string name="poll_closed">Poll closed</string>
+    <string name="poll_votes">%1$d votes</string>
+    <string name="poll_results_title">Poll results</string>
+    <string name="poll_total_votes">%1$d total votes</string>
+    <string name="poll_jump_to_poll">Jump to poll</string>
+
+    <!-- Encryption (pending announce) -->
+    <string name="enc_pending_note">Encryption starts once the group has 3 members</string>
+
+    <string name="contacts_search_hint">Search contacts</string>
+    <string name="groups_menu_open">Open</string>
 
     <!-- Encryption -->
     <string name="enc_section">Encryption</string>

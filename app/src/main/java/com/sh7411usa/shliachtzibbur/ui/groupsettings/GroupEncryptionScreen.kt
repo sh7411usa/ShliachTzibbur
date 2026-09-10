@@ -57,6 +57,10 @@ fun GroupEncryptionScreen(
     val keyError by viewModel.keyError.collectAsStateWithLifecycle()
     val isAdmin = group?.isAdmin == true
 
+    androidx.compose.runtime.LaunchedEffect(group?.memberCount, crypto.pendingAnnounce) {
+        if (crypto.pendingAnnounce) viewModel.announcePendingIfReady()
+    }
+
     var keyDraft by remember { mutableStateOf("") }
     var confirmEnable by remember { mutableStateOf(false) }
     var confirmDisable by remember { mutableStateOf(false) }

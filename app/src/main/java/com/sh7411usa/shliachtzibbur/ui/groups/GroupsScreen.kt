@@ -1,13 +1,16 @@
 package com.sh7411usa.shliachtzibbur.ui.groups
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -16,11 +19,14 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -35,6 +41,7 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -53,9 +60,12 @@ import com.sh7411usa.shliachtzibbur.ui.AppViewModelFactory
 import com.sh7411usa.shliachtzibbur.ui.common.EmptyState
 import com.sh7411usa.shliachtzibbur.ui.common.ErrorRow
 import com.sh7411usa.shliachtzibbur.ui.common.PrimaryButton
+import com.sh7411usa.shliachtzibbur.ui.common.ConfirmDialog
+import com.sh7411usa.shliachtzibbur.ui.common.SearchSnippet
 import com.sh7411usa.shliachtzibbur.ui.common.SectionHeader
 import com.sh7411usa.shliachtzibbur.ui.common.ThinDivider
 import com.sh7411usa.shliachtzibbur.ui.common.focusHighlight
+import com.sh7411usa.shliachtzibbur.ui.common.rememberIsTouchDevice
 import com.sh7411usa.shliachtzibbur.ui.common.toUserMessage
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -65,13 +75,19 @@ fun GroupsScreen(
     onCreateGroup: () -> Unit,
     onOpenContacts: () -> Unit,
     onOpenSettings: () -> Unit,
+    onOpenGroupSettings: (String) -> Unit,
+    onOpenMembers: (String) -> Unit,
+    onManageEncryption: (String) -> Unit,
     viewModel: GroupsViewModel = viewModel(factory = AppViewModelFactory.Factory),
 ) {
     val groups by viewModel.groups.collectAsStateWithLifecycle()
     val state by viewModel.state.collectAsStateWithLifecycle()
     val query by viewModel.query.collectAsStateWithLifecycle()
     val searchResults by viewModel.searchResults.collectAsStateWithLifecycle()
+    val encryptedIds by viewModel.encryptedIds.collectAsStateWithLifecycle()
     var searchOpen by rememberSaveable { mutableStateOf(false) }
+    var confirmLeave by rememberSaveable { mutableStateOf<String?>(null) }
+    var confirmDelete by rememberSaveable { mutableStateOf<String?>(null) }
 
     Scaffold(
         topBar = {
@@ -145,6 +161,24 @@ fun GroupsScreen(
             )
             return@Scaffold
         }
+        confirmLeave?.let { id ->
+            ConfirmDialog(
+                text = stringResource(R.string.group_settings_leave_confirm),
+                confirmLabel = stringResource(R.string.action_leave),
+                onConfirm = { confirmLeave = null; viewModel.leave(id) },
+                onDismiss = { confirmLeave = null },
+                destructive = true,
+            )
+        }
+        confirmDelete?.let { id ->
+            ConfirmDialog(
+                text = stringResource(R.string.group_settings_delete_confirm),
+                confirmLabel = stringResource(R.string.action_delete),
+                onConfirm = { confirmDelete = null; viewModel.delete(id) },
+                onDismiss = { confirmDelete = null },
+                destructive = true,
+            )
+        }
         PullToRefreshBox(
             isRefreshing = state.refreshing,
             onRefresh = viewModel::refresh,
@@ -171,7 +205,16 @@ fun GroupsScreen(
                         }
                     }
                     items(groups, key = { it.id }) { group ->
-                        GroupRow(group = group, onClick = { onOpenGroup(group.id) })
+                        GroupRow(
+                            group = group,
+                            encrypted = group.id in encryptedIds,
+                            onClick = { onOpenGroup(group.id) },
+                            onOpenSettings = { onOpenGroupSettings(group.id) },
+                            onOpenMembers = { onOpenMembers(group.id) },
+                            onManageEncryption = { onManageEncryption(group.id) },
+                            onLeave = { confirmLeave = group.id },
+                            onDelete = { confirmDelete = group.id },
+                        )
                         ThinDivider(Modifier.padding(start = 16.dp))
                     }
                 }
@@ -201,6 +244,10 @@ private fun SearchResultsList(
         if (results.messages.isNotEmpty()) {
             item { SectionHeader(stringResource(R.string.search_section_messages)) }
             items(results.messages, key = { "m-${it.message.id}" }) { hit ->
+                val highlight = MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
+                val snippet = remember(hit.message.id, hit.query) {
+                    SearchSnippet.highlighted(hit.message.text, hit.query, highlight)
+                }
                 Column(
                     Modifier
                         .fillMaxWidth()
@@ -210,7 +257,7 @@ private fun SearchResultsList(
                 ) {
                     Text(hit.groupName, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                     Text(
-                        hit.message.text,
+                        snippet,
                         style = MaterialTheme.typography.bodyMedium,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
@@ -222,50 +269,114 @@ private fun SearchResultsList(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun GroupRow(group: Group, onClick: () -> Unit) {
+private fun GroupRow(
+    group: Group,
+    onClick: () -> Unit,
+    encrypted: Boolean = false,
+    onOpenSettings: () -> Unit = {},
+    onOpenMembers: () -> Unit = {},
+    onManageEncryption: () -> Unit = {},
+    onLeave: () -> Unit = {},
+    onDelete: () -> Unit = {},
+) {
     val name = if (group.isSystem) stringResource(R.string.group_system_name) else group.name
     val subtitle = group.lastMessagePreview ?: categoryLabel(group.category)
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .focusHighlight(makeFocusable = true)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(Modifier.weight(1f)) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
+    val isTouch = rememberIsTouchDevice()
+    var menuOpen by remember { mutableStateOf(false) }
+    Box {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .focusHighlight(makeFocusable = true)
+                .combinedClickable(
+                    onClick = { if (isTouch || group.isSystem) onClick() else menuOpen = true },
+                    onLongClick = { if (!group.isSystem) menuOpen = true },
+                )
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (encrypted) {
+                        Icon(
+                            Icons.Filled.Lock,
+                            contentDescription = stringResource(R.string.enc_badge_secure),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(14.dp),
+                        )
+                    }
+                    Text(
+                        name,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = if (group.unreadCount > 0) FontWeight.Bold else FontWeight.Normal,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                    if (group.muted) {
+                        Icon(
+                            Icons.Filled.Notifications,
+                            contentDescription = stringResource(R.string.groups_muted),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
                 Text(
-                    name,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = if (group.unreadCount > 0) FontWeight.Bold else FontWeight.Normal,
+                    subtitle,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false),
                 )
-                if (group.muted) {
-                    Icon(
-                        Icons.Filled.Notifications,
-                        contentDescription = stringResource(R.string.groups_muted),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            }
+            if (group.unreadCount > 0) {
+                UnreadBadge(group.unreadCount)
+            }
+        }
+        if (!group.isSystem) {
+            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.groups_menu_open)) },
+                    onClick = { menuOpen = false; onClick() },
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.group_settings_title)) },
+                    onClick = { menuOpen = false; onOpenSettings() },
+                )
+                if (encrypted) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.enc_screen_title)) },
+                        onClick = { menuOpen = false; onManageEncryption() },
+                    )
+                }
+                if (group.isAdmin) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.group_settings_members)) },
+                        onClick = { menuOpen = false; onOpenMembers() },
+                    )
+                }
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.group_settings_leave)) },
+                    onClick = { menuOpen = false; onLeave() },
+                )
+                if (group.isAdmin) {
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                stringResource(R.string.group_settings_delete),
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        },
+                        onClick = { menuOpen = false; onDelete() },
                     )
                 }
             }
-            Text(
-                subtitle,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-        if (group.unreadCount > 0) {
-            UnreadBadge(group.unreadCount)
         }
     }
 }

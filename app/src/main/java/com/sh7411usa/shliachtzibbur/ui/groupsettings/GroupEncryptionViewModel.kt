@@ -49,14 +49,15 @@ class GroupEncryptionViewModel(
             if (crypto.value.keys.isEmpty()) {
                 cryptoStore.addKey(groupId, newKey(), makeActive = true)
             }
-            cryptoStore.setEnabled(groupId, enabled = true)
-            messageRepository.sendServiceMessage(groupId, ServiceMessage.EncryptionOn)
+            val ready = (group.value?.memberCount ?: 0) >= 3
+            cryptoStore.setEnabled(groupId, enabled = true, pendingAnnounce = !ready)
+            if (ready) messageRepository.sendServiceMessage(groupId, ServiceMessage.EncryptionOn)
         }
     }
 
     fun disableEncryption() {
         viewModelScope.launch {
-            cryptoStore.setEnabled(groupId, enabled = false)
+            cryptoStore.setEnabled(groupId, enabled = false, pendingAnnounce = false)
             messageRepository.sendServiceMessage(groupId, ServiceMessage.EncryptionOff)
         }
     }
@@ -66,6 +67,11 @@ class GroupEncryptionViewModel(
             cryptoStore.addKey(groupId, newKey(), makeActive = true)
             messageRepository.sendServiceMessage(groupId, ServiceMessage.KeyChanged)
         }
+    }
+
+    /** Fire the deferred "encryption on" announcement once the group has 3 members. */
+    fun announcePendingIfReady() {
+        viewModelScope.launch { messageRepository.announcePendingEncryption(groupId) }
     }
 
     fun addKey(hex: String) {

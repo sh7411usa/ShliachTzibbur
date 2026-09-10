@@ -12,7 +12,11 @@ import com.sh7411usa.shliachtzibbur.core.model.Group
 import com.sh7411usa.shliachtzibbur.core.model.MessageSecurity
 import com.sh7411usa.shliachtzibbur.core.result.ApiException
 import com.sh7411usa.shliachtzibbur.core.result.ApiResult
+import com.sh7411usa.shliachtzibbur.core.model.Role
 import com.sh7411usa.shliachtzibbur.core.util.Ids
+import com.sh7411usa.shliachtzibbur.core.util.PinControl
+import com.sh7411usa.shliachtzibbur.core.util.PollSpec
+import com.sh7411usa.shliachtzibbur.core.util.PollToken
 import com.sh7411usa.shliachtzibbur.core.util.ReplyToken
 import com.sh7411usa.shliachtzibbur.data.prefs.AppSettings
 import com.sh7411usa.shliachtzibbur.data.prefs.GroupCrypto
@@ -20,6 +24,7 @@ import com.sh7411usa.shliachtzibbur.data.prefs.GroupCryptoSource
 import com.sh7411usa.shliachtzibbur.data.prefs.SessionStore
 import com.sh7411usa.shliachtzibbur.data.prefs.SettingsStore
 import com.sh7411usa.shliachtzibbur.data.repo.GroupRepository
+import com.sh7411usa.shliachtzibbur.data.repo.MemberRepository
 import com.sh7411usa.shliachtzibbur.data.repo.MessageRepository
 import com.sh7411usa.shliachtzibbur.data.repo.ProfileRepository
 import com.sh7411usa.shliachtzibbur.sync.AppForegroundState
@@ -55,6 +60,7 @@ class MessagesViewModel(
     private val messageRepository: MessageRepository,
     profileRepository: ProfileRepository,
     private val syncManager: SyncManager,
+    private val memberRepository: MemberRepository,
     sessionStore: SessionStore,
     settingsStore: SettingsStore,
     private val crypto: GroupCryptoSource,
@@ -89,6 +95,11 @@ class MessagesViewModel(
     val groupCrypto: StateFlow<GroupCrypto> = crypto.crypto(groupId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), GroupCrypto())
 
+    /** Admin user ids in this group — for gating "Pin" and honouring pin control messages. */
+    val adminIds: StateFlow<Set<String>> = memberRepository.members(groupId)
+        .map { members -> members.filter { it.role == Role.ADMIN }.map { it.userId }.toSet() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
+
     /** The unfiltered stream (thread search doesn't affect the lock decision). */
     private val rawConversation: StateFlow<List<ConversationItem>> =
         messageRepository.conversation(groupId)
@@ -103,12 +114,10 @@ class MessagesViewModel(
             }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), LockState.NotEncrypted)
 
-    /** Message length budget: lower for encrypted groups (base64 + tag overhead). */
-    val maxMessageChars: StateFlow<Int> =
-        combine(group, groupCrypto) { g, gc ->
-            val base = g?.limits?.messageMaxLength ?: 1000
-            if (gc.enabled) minOf(base, ENCRYPTED_MAX_CHARS) else base
-        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 1000)
+    /** The server's byte limit for a message body. The composer shows the *projected* length against it. */
+    val maxMessageChars: StateFlow<Int> = group
+        .map { it?.limits?.messageMaxLength ?: MessageRepository.MAX_BODY_LENGTH }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MessageRepository.MAX_BODY_LENGTH)
 
     private val _state = MutableStateFlow(MessagesUiState())
     val state: StateFlow<MessagesUiState> = _state.asStateFlow()
@@ -118,6 +127,8 @@ class MessagesViewModel(
         refreshLatest()
         loadOlder()
         viewModelScope.launch { messageRepository.sweepStuckOutbox(groupId) }
+        viewModelScope.launch { memberRepository.refresh(groupId) }
+        viewModelScope.launch { messageRepository.announcePendingEncryption(groupId) }
         // Live updates while this screen is open (in addition to any sync service).
         viewModelScope.launch {
             runCatching { syncManager.runWebSocketSession() }
@@ -185,6 +196,7 @@ class MessagesViewModel(
                 is ApiResult.Success -> Unit
             }
             groupRepository.refreshGroup(groupId)
+            messageRepository.announcePendingEncryption(groupId)
         }
     }
 
@@ -219,6 +231,25 @@ class MessagesViewModel(
     /** React to message [targetSeq] with [emoji]; delivered as an `RE:<seq> <emoji>` reply. */
     fun react(targetSeq: Long, emoji: String) = send(ReplyToken.format(targetSeq, emoji))
 
+    fun createPoll(question: String, options: List<String>) {
+        val opts = options.map { it.trim() }.filter { it.isNotEmpty() }
+        if (question.isBlank() || opts.size < 2) return
+        send(PollSpec.format(question.trim(), opts))
+    }
+
+    /** Cast (or attempt to cast — only the first counts) a vote in poll [pollSeq]. */
+    fun vote(pollSeq: Long, choice: Int) = send(PollToken.formatVote(pollSeq, choice))
+
+    fun endPoll(pollSeq: Long) = send(PollToken.formatEnd(pollSeq))
+
+    fun pin(seq: Long) {
+        viewModelScope.launch { messageRepository.sendPinControl(groupId, PinControl.Pin(seq)) }
+    }
+
+    fun unpin(seq: Long) {
+        viewModelScope.launch { messageRepository.sendPinControl(groupId, PinControl.Unpin(seq)) }
+    }
+
     fun retry(clientMessageId: String) {
         viewModelScope.launch { messageRepository.retry(clientMessageId) }
     }
@@ -233,10 +264,5 @@ class MessagesViewModel(
         if (AppForegroundState.visibleGroupId == groupId) {
             AppForegroundState.visibleGroupId = null
         }
-    }
-
-    private companion object {
-        /** base64(plaintext + "!" + 16-byte GCM tag) + "$E1:" must fit the 1000-char body. */
-        const val ENCRYPTED_MAX_CHARS = 720
     }
 }

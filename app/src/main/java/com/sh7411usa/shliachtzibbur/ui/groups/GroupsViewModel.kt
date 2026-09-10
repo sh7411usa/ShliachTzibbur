@@ -6,6 +6,7 @@ import com.sh7411usa.shliachtzibbur.core.model.Group
 import com.sh7411usa.shliachtzibbur.core.model.Message
 import com.sh7411usa.shliachtzibbur.core.result.ApiException
 import com.sh7411usa.shliachtzibbur.core.result.ApiResult
+import com.sh7411usa.shliachtzibbur.data.prefs.GroupCryptoSource
 import com.sh7411usa.shliachtzibbur.data.repo.GroupRepository
 import com.sh7411usa.shliachtzibbur.data.repo.MessageRepository
 import kotlinx.coroutines.FlowPreview
@@ -26,8 +27,8 @@ data class GroupsUiState(
     val error: ApiException? = null,
 )
 
-/** A message that matched a search, with its group's display name. */
-data class MessageHit(val groupId: String, val groupName: String, val message: Message)
+/** A message that matched a search, with its group's display name and the query that hit it. */
+data class MessageHit(val groupId: String, val groupName: String, val message: Message, val query: String)
 
 data class SearchResults(
     val groups: List<Group> = emptyList(),
@@ -38,10 +39,15 @@ data class SearchResults(
 class GroupsViewModel(
     private val groupRepository: GroupRepository,
     private val messageRepository: MessageRepository,
+    cryptoStore: GroupCryptoSource,
 ) : ViewModel() {
 
     val groups: StateFlow<List<Group>> = groupRepository.groups
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** Group ids that are encrypted, for the lock badge. */
+    val encryptedIds: StateFlow<Set<String>> = cryptoStore.enabledGroupIds()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
 
     private val _query = MutableStateFlow("")
     val query: StateFlow<String> = _query.asStateFlow()
@@ -57,7 +63,7 @@ class GroupsViewModel(
                     val byId = groups.associateBy { it.id }
                     val msgHits = messageRepository.search(q).mapNotNull { msg ->
                         val group = byId[msg.groupId] ?: return@mapNotNull null
-                        MessageHit(group.id, group.name, msg)
+                        MessageHit(group.id, group.name, msg, q)
                     }
                     SearchResults(nameHits, msgHits)
                 }
@@ -73,6 +79,14 @@ class GroupsViewModel(
     }
 
     fun setQuery(q: String) = _query.update { q }
+
+    fun leave(groupId: String) {
+        viewModelScope.launch { groupRepository.leave(groupId) }
+    }
+
+    fun delete(groupId: String) {
+        viewModelScope.launch { groupRepository.delete(groupId) }
+    }
 
     fun refresh() {
         _state.update { it.copy(refreshing = true, error = null) }

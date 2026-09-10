@@ -22,6 +22,12 @@ data class GroupCrypto(
     val enabled: Boolean = false,
     /** Seq of the message that turned encryption on — plaintext before it isn't "insecure". */
     val enabledSinceSeq: Long = 0,
+    /**
+     * Encryption is on locally but the "encryption is on" service message hasn't
+     * been sent yet — an admin defers it until the group has 3 members (before
+     * that no one can post anyway).
+     */
+    val pendingAnnounce: Boolean = false,
     /** Insertion order; newest key last. */
     val keys: List<GroupKey> = emptyList(),
     /** The key new outgoing messages are encrypted with. Null = can't send. */
@@ -43,7 +49,10 @@ data class GroupCrypto(
  */
 interface GroupCryptoSource {
     fun crypto(groupId: String): Flow<GroupCrypto>
-    suspend fun setEnabled(groupId: String, enabled: Boolean, sinceSeq: Long = 0)
+
+    /** Group ids that currently have encryption enabled (for list badges). */
+    fun enabledGroupIds(): Flow<Set<String>>
+    suspend fun setEnabled(groupId: String, enabled: Boolean, sinceSeq: Long = 0, pendingAnnounce: Boolean? = null)
     suspend fun addKey(groupId: String, key: GroupKey, makeActive: Boolean)
     suspend fun removeKey(groupId: String, keyId: String)
     suspend fun setActiveKey(groupId: String, keyId: String)
@@ -52,7 +61,8 @@ interface GroupCryptoSource {
 /** No-op source used as the default so non-encryption code paths and tests need no wiring. */
 object NoEncryption : GroupCryptoSource {
     override fun crypto(groupId: String): Flow<GroupCrypto> = flowOf(GroupCrypto())
-    override suspend fun setEnabled(groupId: String, enabled: Boolean, sinceSeq: Long) = Unit
+    override fun enabledGroupIds(): Flow<Set<String>> = flowOf(emptySet())
+    override suspend fun setEnabled(groupId: String, enabled: Boolean, sinceSeq: Long, pendingAnnounce: Boolean?) = Unit
     override suspend fun addKey(groupId: String, key: GroupKey, makeActive: Boolean) = Unit
     override suspend fun removeKey(groupId: String, keyId: String) = Unit
     override suspend fun setActiveKey(groupId: String, keyId: String) = Unit
@@ -73,25 +83,34 @@ class EncryptionStore(private val context: Context) : GroupCryptoSource {
 
     private fun key(groupId: String) = stringPreferencesKey("group:$groupId")
 
+    private fun decode(raw: String?): GroupCrypto? =
+        raw?.let { runCatching { json.decodeFromString<GroupCrypto>(it) }.getOrNull() }
+
     override fun crypto(groupId: String): Flow<GroupCrypto> =
         context.encryptionDataStore.data.map { prefs ->
-            prefs[key(groupId)]?.let {
-                runCatching { json.decodeFromString<GroupCrypto>(it) }
-                    .onFailure { e -> Log.w("Corrupt GroupCrypto for $groupId: $e") }
-                    .getOrDefault(GroupCrypto())
-            } ?: GroupCrypto()
+            decode(prefs[key(groupId)])
+                ?: run {
+                    if (prefs[key(groupId)] != null) Log.w("Corrupt GroupCrypto for $groupId")
+                    GroupCrypto()
+                }
+        }
+
+    override fun enabledGroupIds(): Flow<Set<String>> =
+        context.encryptionDataStore.data.map { prefs ->
+            prefs.asMap().entries
+                .filter { it.key.name.startsWith("group:") }
+                .filter { (decode(it.value as? String))?.enabled == true }
+                .map { it.key.name.removePrefix("group:") }
+                .toSet()
         }
 
     private suspend fun update(groupId: String, transform: (GroupCrypto) -> GroupCrypto) {
         context.encryptionDataStore.edit { prefs ->
-            val current = prefs[key(groupId)]
-                ?.let { runCatching { json.decodeFromString<GroupCrypto>(it) }.getOrNull() }
-                ?: GroupCrypto()
-            prefs[key(groupId)] = json.encodeToString(transform(current))
+            prefs[key(groupId)] = json.encodeToString(transform(decode(prefs[key(groupId)]) ?: GroupCrypto()))
         }
     }
 
-    override suspend fun setEnabled(groupId: String, enabled: Boolean, sinceSeq: Long) =
+    override suspend fun setEnabled(groupId: String, enabled: Boolean, sinceSeq: Long, pendingAnnounce: Boolean?) =
         update(groupId) {
             it.copy(
                 enabled = enabled,
@@ -100,6 +119,7 @@ class EncryptionStore(private val context: Context) : GroupCryptoSource {
                     it.enabledSinceSeq == 0L && sinceSeq > 0 -> sinceSeq
                     else -> it.enabledSinceSeq
                 },
+                pendingAnnounce = pendingAnnounce ?: it.pendingAnnounce,
             )
         }
 

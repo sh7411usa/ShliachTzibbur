@@ -5,14 +5,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sh7411usa.shliachtzibbur.core.crypto.GroupKey
 import com.sh7411usa.shliachtzibbur.core.crypto.KeyHex
-import com.sh7411usa.shliachtzibbur.core.model.ServiceMessage
 import com.sh7411usa.shliachtzibbur.core.result.ApiException
 import com.sh7411usa.shliachtzibbur.core.result.ApiResult
 import com.sh7411usa.shliachtzibbur.core.util.Ids
 import com.sh7411usa.shliachtzibbur.data.prefs.GroupCryptoSource
 import com.sh7411usa.shliachtzibbur.data.repo.GroupRepository
 import com.sh7411usa.shliachtzibbur.data.repo.MemberRepository
-import com.sh7411usa.shliachtzibbur.data.repo.MessageRepository
 import com.sh7411usa.shliachtzibbur.ui.navigation.Routes
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -31,7 +29,6 @@ class CreateGroupViewModel(
     savedStateHandle: SavedStateHandle,
     private val groupRepository: GroupRepository,
     private val memberRepository: MemberRepository,
-    private val messageRepository: MessageRepository,
     private val crypto: GroupCryptoSource,
 ) : ViewModel() {
 
@@ -63,8 +60,9 @@ class CreateGroupViewModel(
                     if (encrypted) {
                         val key = GroupKey(Ids.newUuid(), KeyHex.generate(), "Group key", System.currentTimeMillis())
                         crypto.addKey(groupId, key, makeActive = true)
-                        crypto.setEnabled(groupId, enabled = true)
-                        messageRepository.sendServiceMessage(groupId, ServiceMessage.EncryptionOn)
+                        // A new group has one member; defer the "encryption on"
+                        // announcement until it reaches 3 (before that no one can post).
+                        crypto.setEnabled(groupId, enabled = true, pendingAnnounce = true)
                     }
                     _state.update { it.copy(submitting = false, createdGroupId = groupId) }
                 }

@@ -64,7 +64,11 @@ com.sh7411usa.shliachtzibbur
 │   │                        Play Services); ACCESS_COARSE_LOCATION
 │   │   ReplyToken           the `RE:<seq> ` reply marker: parse / format / strip
 │   │   Reactions            an emoji-only ReplyToken reply = a reaction; QUICK /
-│   │                        PALETTE emoji sets + isEmojiOnly detection (JVM-testable)
+│   │                        PALETTE emoji sets + isEmojiOnly / singleEmojiOrNull
+│   │   Polls                PollSpec (`$POLL:` question + options), PollToken
+│   │                        (`RE:<seq>:<n|END>` votes), Polls.aggregate ->
+│   │                        PollState (counts, first-vote-wins, auto-end +1 week)
+│   │   PinControl           `$PIN:`/`$UNPIN:<seq>` markers (honoured only from admins)
 │   │
 │   ├── crypto/               Group encryption, dependency-free & JVM-testable:
 │   │   EncryptionScheme      interface (id, tokenPrefix, encrypt, tryDecrypt) — modular
@@ -179,24 +183,32 @@ com.sh7411usa.shliachtzibbur
                              Tzibbur, expand a contact to see/add groups, invite the
                              rest via the system share sheet
     groups/                  GroupsViewModel + GroupsScreen (Room-backed list,
-                             pull-to-refresh + toolbar refresh, unread/mute; top bar:
-                             refresh / add / contacts / settings),
+                             pull-to-refresh + toolbar refresh, unread/mute, lock
+                             badge on encrypted groups, long-press row menu
+                             (open/settings/members/leave/delete/manage-encryption);
+                             top bar: refresh / add / contacts / settings; search
+                             with highlighted snippets),
                              CreateGroupViewModel + CreateGroupScreen (category chips;
                              optional memberPhone arg adds a contact after creation),
                              categoryLabel
     messages/                MessagesViewModel (group + conversation + self id +
-                             settings + thread search + encryption lock state /
-                             submitKey / maxMessageChars; starts a WebSocket session
-                             while open; send/react/retry/deleteFailed/loadOlder;
-                             confirm-sweep + 5s poll; marks read) + MessagesScreen
+                             settings + thread search + encryption lock/submitKey +
+                             adminIds + vote/endPoll/createPoll/pin/unpin +
+                             announcePendingEncryption; WebSocket session while
+                             open; send/react/retry/loadOlder; marks read),
+                             ConversationRows (pure deriveConversation -> ConvRow
+                             list: bubbles/stickers/poll cards/summary/tags +
+                             reactionsBySeq + pinnedSeq; JVM-tested) + MessagesScreen
                              (MessageText bubbles, optional #seq, long-press /
                              D-pad-centre menu: quick-emoji row + chooser / Reply /
-                             Copy / View original; quoted-reply preview; emoji
-                             reactions split from the stream into collapsible
-                             badges; secure / insecure / undecryptable badges +
-                             ServiceTag rows; EncryptionLockPanel gate + paste-key
-                             dialog; attach contact/location; in-thread search;
-                             input bar with reply strip + char counter + IME-Send)
+                             Copy / View original / Pin; quoted-reply preview;
+                             collapsible reaction badges; secure/insecure/
+                             undecryptable badges + ControlTag rows; large emoji
+                             stickers; interactive PollCard + PollSummaryRow;
+                             pinned banner; EncryptionLockPanel + paste-key dialog;
+                             attach contact/location/poll; scroll-to-bottom FAB
+                             (touch); input bar with reply strip + projected-length
+                             counter + IME-Send)
     groupsettings/           AddMembersViewModel + AddMembersScreen (searchable contact
                              multi-select picker + type-a-number; already-members
                              disabled), plus

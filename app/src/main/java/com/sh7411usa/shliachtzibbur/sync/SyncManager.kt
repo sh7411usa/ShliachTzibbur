@@ -3,6 +3,9 @@ package com.sh7411usa.shliachtzibbur.sync
 import com.sh7411usa.shliachtzibbur.core.model.Message
 import com.sh7411usa.shliachtzibbur.core.model.ServiceMessage
 import com.sh7411usa.shliachtzibbur.core.net.TzibburApi
+import com.sh7411usa.shliachtzibbur.core.util.PinControl
+import com.sh7411usa.shliachtzibbur.core.util.PollSpec
+import com.sh7411usa.shliachtzibbur.core.util.PollToken
 import com.sh7411usa.shliachtzibbur.core.net.dto.PendingGroupDto
 import com.sh7411usa.shliachtzibbur.core.net.dto.toDomain
 import com.sh7411usa.shliachtzibbur.core.net.ws.TzibburWebSocket
@@ -67,14 +70,23 @@ class SyncManager(
 
         if (shouldNotify) {
             val groupName = groupDao.find(groupId)?.name ?: return ackQuietly(groupId, maxSeq)
-            val notifiable = messages.filter { ServiceMessage.parse(it.text) == null }
+            // Coordination / vote messages aren't notifiable; the raw text is
+            // decrypted first so the check sees the real body.
+            val decrypted = messageRepository.decryptedForDisplay(groupId, messages)
+            val notifiable = decrypted.filter { m ->
+                ServiceMessage.parse(m.text) == null &&
+                    PinControl.parse(m.text) == null &&
+                    PollToken.parse(m.text) == null
+            }.map { m ->
+                if (PollSpec.isPoll(m.text)) {
+                    val q = "📊 ${PollSpec.parse(m.text)?.question ?: ""}"
+                    m.copy(body = m.displayName?.let { "$it: $q" } ?: q)
+                } else {
+                    m
+                }
+            }
             if (notifiable.isNotEmpty()) {
-                notifications.notifyNewMessages(
-                    groupId,
-                    groupName,
-                    messageRepository.decryptedForDisplay(groupId, notifiable),
-                    selfId,
-                )
+                notifications.notifyNewMessages(groupId, groupName, notifiable, selfId)
             }
         }
 

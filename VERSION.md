@@ -6,6 +6,49 @@ stays in sync with `app/build.gradle.kts`.
 
 ---
 
+## 0.12 — versionCode 13 — 2026-09-10
+
+Polls, pinned messages, stickers and conversation polish.
+
+- **Polls** — attach → Poll: a question + 2+ options sent as a `$POLL:` message
+  (non-ST clients read the text and can vote by replying with a number). ST shows
+  an interactive card: results stay hidden until you vote or the poll closes,
+  only your first vote counts, others' votes are remembered. The author can
+  **End poll** (`RE:<seq>:END`); otherwise it auto-closes after a week. A closed
+  poll drops a results-summary row at the close position with a jump-to-poll
+  arrow. Summaries can't be copied or replied to. New pure `PollSpec` / `PollToken`
+  / `Polls.aggregate`.
+- **Pinned messages** — an admin long-presses a message (or poll) → Pin; a
+  `$PIN:<seq>` control message goes out and clients honour it only if the sender
+  is an admin. Shows as a tag plus a banner at the top of the thread (tap to jump
+  / an unpin button for admins). `$UNPIN:<seq>` clears it. New `PinControl`.
+- **Stickers** — a message that is just 1–3 emoji (and not a reply) renders large
+  with no bubble.
+- **Encrypted length** — the composer now shows the *real* wire length
+  (`MessageCrypto.projectedCipherLength`, base64 + tag) against 1000 as you type,
+  turns red and blocks Send when over; `MessageRepository.send` re-checks.
+- **Encryption in the lists** — a lock icon on encrypted groups in the group list
+  and next to the title in the thread.
+- **Deferred encryption announce** — turning encryption on for a group with fewer
+  than 3 members no longer posts the "encryption on" message; an admin's client
+  posts it automatically once the 3rd member joins. Until then the admin sees a
+  "starts at 3 members" tag.
+- **3-member posting floor** — no messages until the group has at least 3 members.
+- **Contacts search** — a search field on the Contacts screen.
+- **Search highlighting** — group-search message hits show a highlighted snippet
+  windowed around the match (`SearchSnippet`).
+- **Group-list long-press** — Open / Group settings / Leave (confirm) / and for
+  admins Members + Delete / and Manage encryption when encrypted.
+- **Scroll-to-bottom FAB** — on touch devices, when the thread isn't at the end.
+- `MessagesScreen`'s row building moved to a pure `deriveConversation`
+  (`ConversationRows.kt`), unit-tested.
+
+### Deferred
+- Editing a poll; multi-select polls; poll results in notifications.
+- Multiple simultaneous pins.
+- Thread-search highlighting inside bubbles (group-search results only).
+- Announcing pending encryption from a background sync path (only on screen open).
+
 ## 0.11 — versionCode 12 — 2026-09-10
 
 Group encryption (`$E1` — AES-256-GCM, client-side shared key).

@@ -8,13 +8,19 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 
 /** In-memory [GroupCryptoSource] for repository / view-model tests. */
-class FakeGroupCryptoSource(initial: GroupCrypto = GroupCrypto()) : GroupCryptoSource {
+class FakeGroupCryptoSource(
+    initial: GroupCrypto = GroupCrypto(),
+    private val groupId: String = "g1",
+) : GroupCryptoSource {
 
     val state = MutableStateFlow(initial)
 
     override fun crypto(groupId: String): Flow<GroupCrypto> = state.map { it }
 
-    override suspend fun setEnabled(groupId: String, enabled: Boolean, sinceSeq: Long) {
+    override fun enabledGroupIds(): Flow<Set<String>> =
+        state.map { if (it.enabled) setOf(this.groupId) else emptySet() }
+
+    override suspend fun setEnabled(groupId: String, enabled: Boolean, sinceSeq: Long, pendingAnnounce: Boolean?) {
         state.value = state.value.copy(
             enabled = enabled,
             enabledSinceSeq = if (enabled && state.value.enabledSinceSeq == 0L && sinceSeq > 0) {
@@ -22,6 +28,7 @@ class FakeGroupCryptoSource(initial: GroupCrypto = GroupCrypto()) : GroupCryptoS
             } else {
                 state.value.enabledSinceSeq
             },
+            pendingAnnounce = pendingAnnounce ?: state.value.pendingAnnounce,
         )
     }
 

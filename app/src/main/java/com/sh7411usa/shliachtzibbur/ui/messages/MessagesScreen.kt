@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -38,11 +39,15 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
@@ -93,10 +98,12 @@ import com.sh7411usa.shliachtzibbur.core.model.WhoCanPost
 import com.sh7411usa.shliachtzibbur.core.util.Reactions
 import com.sh7411usa.shliachtzibbur.core.util.ReplyToken
 import com.sh7411usa.shliachtzibbur.ui.AppViewModelFactory
+import com.sh7411usa.shliachtzibbur.ui.common.ConfirmDialog
 import com.sh7411usa.shliachtzibbur.ui.common.MessageText
 import com.sh7411usa.shliachtzibbur.ui.common.focusHighlight
 import com.sh7411usa.shliachtzibbur.ui.common.rememberIsTouchDevice
 import com.sh7411usa.shliachtzibbur.ui.common.toUserMessage
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -114,38 +121,60 @@ fun MessagesScreen(
     val lockState by viewModel.lockState.collectAsStateWithLifecycle()
     val groupCrypto by viewModel.groupCrypto.collectAsStateWithLifecycle()
     val maxMessageChars by viewModel.maxMessageChars.collectAsStateWithLifecycle()
+    val adminIds by viewModel.adminIds.collectAsStateWithLifecycle()
     var searchOpen by rememberSaveable { mutableStateOf(false) }
     var replyToSeq by rememberSaveable { mutableStateOf<Long?>(null) }
     var showPasteKey by rememberSaveable { mutableStateOf(false) }
+    var showPollComposer by rememberSaveable { mutableStateOf(false) }
 
     val locked = lockState == LockState.NeedsKey
+    val selfIsAdmin = selfId != null && selfId in adminIds
+    val isTouch = rememberIsTouchDevice()
 
     val listState = rememberLazyListState()
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
 
-    // Emoji reactions are pulled out of the message stream and hung on the
-    // message each one targets; everything else stays a normal row.
-    val (visibleItems, reactionsBySeq) = remember(items) { splitReactions(items) }
+    // Reactions hang on their target; polls / votes / pins / service messages
+    // become tags, cards or summary rows.
+    val now = remember(items) { System.currentTimeMillis() }
+    val derived = remember(items, selfId, adminIds, now) {
+        deriveConversation(items, selfId, adminIds, now)
+    }
+    val rows = derived.rows
+    val reactionsBySeq = derived.reactionsBySeq
 
-    // Resolve reply markers against the messages currently in the thread.
-    val deliveredBySeq = remember(visibleItems) {
-        visibleItems.asSequence()
-            .filterIsInstance<ConversationItem.Delivered>()
-            .associateBy { it.message.seq }
+    // Reply-quote lookup, over the decrypted display text.
+    val bySeq = remember(rows) {
+        rows.filterIsInstance<ConvRow.Msg>().associateBy { it.item.message.seq }
     }
     fun quotedFor(seq: Long): QuotedRef =
-        deliveredBySeq[seq]?.let { QuotedRef(seq, it.message.displayName, ReplyToken.strip(it.displayText)) }
+        bySeq[seq]?.let { QuotedRef(seq, it.item.message.displayName, ReplyToken.strip(it.text)) }
             ?: QuotedRef(seq, null, null)
 
-    // Scroll to the newest message only when the tail changes (a new message),
-    // not when older history is prepended by pagination.
-    val tailKey = visibleItems.lastOrNull()?.let { it.key() }
+    // A "load older" header sits at LazyColumn index 0 when more history exists.
+    val listOffset = if (state.hasMoreHistory) 1 else 0
+    fun rowIndexForSeq(seq: Long): Int? =
+        rows.indexOfFirst { it is ConvRow.Msg && it.item.message.seq == seq }
+            .takeIf { it >= 0 }?.plus(listOffset)
+
+    // Scroll to the newest row when the tail changes (a new message), not on
+    // history pagination.
+    val tailKey = rows.lastOrNull { it !is ConvRow.Pending }?.key
     LaunchedEffect(tailKey) {
-        if (visibleItems.isNotEmpty()) listState.animateScrollToItem(visibleItems.lastIndex)
+        if (rows.isNotEmpty()) listState.animateScrollToItem(rows.lastIndex + listOffset)
+    }
+
+    val lastListIndex = rows.lastIndex + listOffset
+    val atBottom by remember(lastListIndex) {
+        androidx.compose.runtime.derivedStateOf {
+            val last = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+            last >= lastListIndex.coerceAtLeast(0)
+        }
     }
 
     val isSystem = group?.kind == GroupKind.SYSTEM
     val currentIsAdmin = group?.isAdmin == true
-    val minToPost = group?.limits?.minMembersToPost ?: 0
+    val minToPost = maxOf(group?.limits?.minMembersToPost ?: 0, 3)
     val memberCount = group?.memberCount ?: 0
     val whoCanPost = group?.settings?.whoCanPost ?: WhoCanPost.EVERYONE
 
@@ -156,6 +185,13 @@ fun MessagesScreen(
         groupCrypto.enabled && groupCrypto.activeKey == null -> stringResource(R.string.enc_error_locked)
         else -> null
     }
+    val encrypted = groupCrypto.enabled && groupCrypto.activeKey != null
+    fun projectedLength(fullPlaintext: String): Int =
+        if (encrypted) {
+            com.sh7411usa.shliachtzibbur.core.crypto.MessageCrypto.projectedCipherLength(fullPlaintext)
+        } else {
+            fullPlaintext.length
+        }
 
     Scaffold(
         topBar = {
@@ -176,10 +212,21 @@ fun MessagesScreen(
                             modifier = Modifier.fillMaxWidth(),
                         )
                     } else {
-                        Text(
-                            if (isSystem) stringResource(R.string.group_system_name) else group?.name.orEmpty(),
-                            maxLines = 1,
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (groupCrypto.enabled) {
+                                Icon(
+                                    Icons.Filled.Lock,
+                                    contentDescription = stringResource(R.string.enc_badge_secure),
+                                    modifier = Modifier
+                                        .padding(end = 6.dp)
+                                        .size(18.dp),
+                                )
+                            }
+                            Text(
+                                if (isSystem) stringResource(R.string.group_system_name) else group?.name.orEmpty(),
+                                maxLines = 1,
+                            )
+                        }
                     }
                 },
                 navigationIcon = {
@@ -219,12 +266,26 @@ fun MessagesScreen(
                     enabled = postBlockedReason == null,
                     blockedReason = postBlockedReason,
                     sending = state.sending,
-                    maxLength = maxMessageChars,
-                    encrypted = groupCrypto.enabled && groupCrypto.activeKey != null,
+                    hardLimit = maxMessageChars,
+                    encrypted = encrypted,
+                    projectedLength = ::projectedLength,
                     replyingTo = replyToSeq?.let { quotedFor(it) },
                     onCancelReply = { replyToSeq = null },
                     onSend = viewModel::send,
+                    onCreatePoll = { showPollComposer = true },
                 )
+            }
+        },
+        floatingActionButton = {
+            if (isTouch && !locked && !atBottom && rows.isNotEmpty()) {
+                androidx.compose.material3.SmallFloatingActionButton(
+                    onClick = { scope.launch { listState.animateScrollToItem(lastListIndex) } },
+                ) {
+                    Icon(
+                        Icons.Filled.KeyboardArrowDown,
+                        contentDescription = stringResource(R.string.messages_scroll_to_latest),
+                    )
+                }
             }
         },
     ) { padding ->
@@ -252,7 +313,23 @@ fun MessagesScreen(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                 )
             }
-            if (visibleItems.isEmpty()) {
+
+            derived.pinnedSeq?.let { pin ->
+                val pinnedRow = bySeq[pin]
+                PinnedBanner(
+                    text = pinnedRow?.let { it.poll?.let { p -> "📊 " + p.question } ?: it.text }
+                        ?: stringResource(R.string.pin_banner_unavailable),
+                    canUnpin = selfIsAdmin,
+                    onTap = {
+                        val idx = rowIndexForSeq(pin)
+                        if (idx != null) scope.launch { listState.animateScrollToItem(idx) }
+                        else viewModel.loadOlder()
+                    },
+                    onUnpin = { viewModel.unpin(pin) },
+                )
+            }
+
+            if (rows.isEmpty()) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(
                         stringResource(R.string.messages_empty),
@@ -277,51 +354,101 @@ fun MessagesScreen(
                             }
                         }
                     }
-                    items(visibleItems, key = { it.key() }) { item ->
-                        when (item) {
-                            is ConversationItem.Delivered -> {
-                                val serviceKind = remember(item.displayText) {
-                                    ServiceMessage.parse(item.displayText)
-                                }
-                                if (serviceKind != null) {
-                                    ServiceTag(serviceKind, item.message.displayName)
+                    items(rows, key = { it.key }) { row ->
+                        when (row) {
+                            is ConvRow.Control -> ControlTag(row.kind, row.actor)
+
+                            is ConvRow.Summary -> PollSummaryRow(
+                                state = row.state,
+                                onJumpToPoll = {
+                                    rowIndexForSeq(row.state.pollSeq)?.let { i ->
+                                        scope.launch { listState.animateScrollToItem(i) }
+                                    }
+                                },
+                            )
+
+                            is ConvRow.Pending -> PendingBubble(
+                                text = row.outbox.text,
+                                failed = row.outbox.state == OutboxState.FAILED,
+                                onRetry = { viewModel.retry(row.outbox.clientMessageId) },
+                                onDelete = { viewModel.deleteFailed(row.outbox.clientMessageId) },
+                            )
+
+                            is ConvRow.Msg -> {
+                                val m = row.item.message
+                                val isSelf = m.senderId == selfId
+                                if (row.poll != null) {
+                                    PollCard(
+                                        state = row.poll,
+                                        actorName = m.displayName,
+                                        isSelf = isSelf,
+                                        isAuthor = m.senderId != null && m.senderId == row.poll.authorId,
+                                        canReply = postBlockedReason == null,
+                                        canPin = selfIsAdmin,
+                                        isPinned = derived.pinnedSeq == m.seq,
+                                        onVote = { choice -> viewModel.vote(m.seq, choice) },
+                                        onEndPoll = { viewModel.endPoll(m.seq) },
+                                        onPin = { viewModel.pin(m.seq) },
+                                        onUnpin = { viewModel.unpin(m.seq) },
+                                    )
+                                } else if (row.sticker) {
+                                    StickerBubble(
+                                        emoji = row.text,
+                                        isSelf = isSelf,
+                                        canReply = postBlockedReason == null,
+                                        canPin = selfIsAdmin,
+                                        isPinned = derived.pinnedSeq == m.seq,
+                                        reactions = reactionsBySeq[m.seq].orEmpty(),
+                                        onReply = { replyToSeq = m.seq },
+                                        onReact = { e -> viewModel.react(m.seq, e) },
+                                        onPin = { viewModel.pin(m.seq) },
+                                        onUnpin = { viewModel.unpin(m.seq) },
+                                    )
                                 } else {
-                                    val body = item.displayText
-                                    val reply = remember(body) { ReplyToken.parse(body) }
+                                    val reply = remember(row.text) { ReplyToken.parse(row.text) }
                                     MessageBubble(
-                                        text = reply?.body ?: body,
+                                        text = reply?.body ?: row.text,
                                         quoted = reply?.let { quotedFor(it.seq) },
-                                        seq = item.message.seq,
-                                        sender = item.message.displayName,
-                                        isSelf = item.message.senderId == selfId,
+                                        seq = m.seq,
+                                        sender = m.displayName,
+                                        isSelf = isSelf,
                                         isSystem = isSystem,
                                         markdown = settings.messagesMarkdown && !isSystem,
                                         showSeq = settings.showMessageSeq,
                                         canReply = postBlockedReason == null,
-                                        security = item.security,
-                                        original = item.message.text.takeIf {
-                                            item.security == MessageSecurity.Secure ||
-                                                item.security == MessageSecurity.Undecryptable
+                                        canPin = selfIsAdmin,
+                                        isPinned = derived.pinnedSeq == m.seq,
+                                        security = row.item.security,
+                                        original = m.text.takeIf {
+                                            row.item.security == MessageSecurity.Secure ||
+                                                row.item.security == MessageSecurity.Undecryptable
                                         },
-                                        reactions = reactionsBySeq[item.message.seq].orEmpty(),
-                                        onReply = { replyToSeq = item.message.seq },
-                                        onReact = { emoji -> viewModel.react(item.message.seq, emoji) },
+                                        reactions = reactionsBySeq[m.seq].orEmpty(),
+                                        onReply = { replyToSeq = m.seq },
+                                        onReact = { e -> viewModel.react(m.seq, e) },
                                         onRequestKey = { showPasteKey = true },
+                                        onPin = { viewModel.pin(m.seq) },
+                                        onUnpin = { viewModel.unpin(m.seq) },
                                     )
                                 }
                             }
-
-                            is ConversationItem.Pending -> PendingBubble(
-                                text = item.outbox.text,
-                                failed = item.outbox.state == OutboxState.FAILED,
-                                onRetry = { viewModel.retry(item.outbox.clientMessageId) },
-                                onDelete = { viewModel.deleteFailed(item.outbox.clientMessageId) },
-                            )
                         }
+                    }
+                    if (groupCrypto.pendingAnnounce && currentIsAdmin) {
+                        item(key = "enc-pending") { ControlTag(ControlKind.EncryptionPending, null) }
                     }
                 }
             }
         }
+    }
+
+    if (showPollComposer) {
+        PollComposerDialog(
+            lengthOf = { q, opts -> projectedLength(com.sh7411usa.shliachtzibbur.core.util.PollSpec.format(q, opts)) },
+            hardLimit = maxMessageChars,
+            onCreate = { q, opts -> showPollComposer = false; viewModel.createPoll(q, opts) },
+            onDismiss = { showPollComposer = false },
+        )
     }
 
     if (showPasteKey) {
@@ -334,25 +461,26 @@ fun MessagesScreen(
     }
 }
 
-private fun ConversationItem.key(): String = when (this) {
-    is ConversationItem.Delivered -> "d-${message.id}"
-    is ConversationItem.Pending -> "p-${outbox.clientMessageId}"
-}
-
-/** Centered grey tag for an in-band encryption service message. */
+/** Centered grey tag for an in-band control message (encryption, pin, poll-end). */
 @Composable
-private fun ServiceTag(kind: ServiceMessage, actor: String?) {
+private fun ControlTag(kind: ControlKind, actor: String?) {
+    val name = actor ?: stringResource(R.string.control_someone)
     val text = when (kind) {
-        ServiceMessage.EncryptionOn ->
+        ControlKind.EncOn ->
             if (actor != null) stringResource(R.string.enc_tag_enabled, actor)
             else stringResource(R.string.enc_tag_enabled_generic)
-        ServiceMessage.EncryptionOff ->
+        ControlKind.EncOff ->
             if (actor != null) stringResource(R.string.enc_tag_disabled, actor)
             else stringResource(R.string.enc_tag_disabled_generic)
-        ServiceMessage.KeyChanged ->
+        ControlKind.KeyChanged ->
             if (actor != null) stringResource(R.string.enc_tag_key_changed, actor)
             else stringResource(R.string.enc_tag_key_changed_generic)
+        ControlKind.Pinned -> stringResource(R.string.pin_tag_pinned, name)
+        ControlKind.Unpinned -> stringResource(R.string.pin_tag_unpinned, name)
+        ControlKind.PollEnded -> stringResource(R.string.poll_tag_ended, name)
+        ControlKind.EncryptionPending -> stringResource(R.string.enc_pending_note)
     }
+    val icon = if (kind == ControlKind.Pinned || kind == ControlKind.Unpinned) Icons.Filled.Star else Icons.Filled.Lock
     Row(
         Modifier
             .fillMaxWidth()
@@ -361,7 +489,7 @@ private fun ServiceTag(kind: ServiceMessage, actor: String?) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
-            Icons.Filled.Lock,
+            icon,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(14.dp),
@@ -374,6 +502,345 @@ private fun ServiceTag(kind: ServiceMessage, actor: String?) {
             modifier = Modifier.padding(start = 6.dp),
         )
     }
+}
+
+/** Banner above the thread showing the currently pinned message. */
+@Composable
+private fun PinnedBanner(text: String, canUnpin: Boolean, onTap: () -> Unit, onUnpin: () -> Unit) {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        tonalElevation = 2.dp,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .focusHighlight(makeFocusable = true)
+                .clickable(onClick = onTap)
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(Icons.Filled.Star, contentDescription = null, modifier = Modifier.size(16.dp))
+            Column(Modifier.weight(1f).padding(start = 8.dp)) {
+                Text(
+                    stringResource(R.string.pin_banner_title),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Text(
+                    text,
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            if (canUnpin) {
+                IconButton(
+                    onClick = onUnpin,
+                    modifier = Modifier.focusHighlight(makeFocusable = true),
+                ) {
+                    Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.pin_action_unpin))
+                }
+            }
+        }
+    }
+}
+
+/** A message that is just an emoji — rendered big, no bubble. Still long-pressable. */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun StickerBubble(
+    emoji: String,
+    isSelf: Boolean,
+    canReply: Boolean,
+    canPin: Boolean,
+    isPinned: Boolean,
+    reactions: List<Reaction>,
+    onReply: () -> Unit,
+    onReact: (String) -> Unit,
+    onPin: () -> Unit,
+    onUnpin: () -> Unit,
+) {
+    val isTouch = rememberIsTouchDevice()
+    var menuOpen by remember { mutableStateOf(false) }
+    var showEmojiPicker by remember { mutableStateOf(false) }
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 3.dp),
+        horizontalAlignment = if (isSelf) Alignment.End else Alignment.Start,
+    ) {
+        Box {
+            Text(
+                emoji,
+                fontSize = 52.sp,
+                modifier = Modifier
+                    .focusHighlight(makeFocusable = true)
+                    .combinedClickable(
+                        onClick = { if (!isTouch) menuOpen = true },
+                        onLongClick = { menuOpen = true },
+                    )
+                    .padding(4.dp),
+            )
+            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                if (canReply) {
+                    QuickReactionRow(
+                        onPick = { menuOpen = false; onReact(it) },
+                        onMore = { menuOpen = false; showEmojiPicker = true },
+                    )
+                    HorizontalDivider()
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.messages_reply)) },
+                        onClick = { menuOpen = false; onReply() },
+                    )
+                }
+                if (canPin) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(if (isPinned) R.string.pin_action_unpin else R.string.pin_action_pin)) },
+                        onClick = { menuOpen = false; if (isPinned) onUnpin() else onPin() },
+                    )
+                }
+            }
+        }
+        if (reactions.isNotEmpty()) ReactionBar(reactions = reactions, alignEnd = isSelf)
+    }
+    if (showEmojiPicker) {
+        EmojiPickerDialog(
+            onPick = { showEmojiPicker = false; onReact(it) },
+            onDismiss = { showEmojiPicker = false },
+        )
+    }
+}
+
+/** Interactive poll card. Results stay hidden until the viewer votes or the poll closes. */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun PollCard(
+    state: com.sh7411usa.shliachtzibbur.core.util.PollState,
+    actorName: String?,
+    isSelf: Boolean,
+    isAuthor: Boolean,
+    canReply: Boolean,
+    canPin: Boolean,
+    isPinned: Boolean,
+    onVote: (Int) -> Unit,
+    onEndPoll: () -> Unit,
+    onPin: () -> Unit,
+    onUnpin: () -> Unit,
+) {
+    val isTouch = rememberIsTouchDevice()
+    var menuOpen by remember { mutableStateOf(false) }
+    var confirmEnd by remember { mutableStateOf(false) }
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 3.dp),
+        horizontalAlignment = if (isSelf) Alignment.End else Alignment.Start,
+    ) {
+        Box {
+            Column(
+                Modifier
+                    .widthIn(max = 340.dp)
+                    .focusHighlight(makeFocusable = true)
+                    .combinedClickable(
+                        onClick = { if (!isTouch) menuOpen = true },
+                        onLongClick = { menuOpen = true },
+                    )
+                    .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(14.dp))
+                    .padding(12.dp),
+            ) {
+                Text(
+                    stringResource(R.string.poll_started_by, actorName ?: stringResource(R.string.control_someone)),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Text(state.question, style = MaterialTheme.typography.titleSmall)
+                Spacer(Modifier.height(6.dp))
+                state.options.forEachIndexed { i, opt ->
+                    val choice = i + 1
+                    val count = state.counts.getOrElse(i) { 0 }
+                    val pct = if (state.totalVotes > 0) count * 100 / state.totalVotes else 0
+                    if (state.showResults) {
+                        Column(Modifier.padding(vertical = 3.dp)) {
+                            Row {
+                                Text(
+                                    (if (state.myChoice == choice) "✓ " else "") + opt,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    modifier = Modifier.weight(1f),
+                                )
+                                Text("$count · $pct%", style = MaterialTheme.typography.labelSmall)
+                            }
+                            androidx.compose.material3.LinearProgressIndicator(
+                                progress = { if (state.totalVotes > 0) count.toFloat() / state.totalVotes else 0f },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 2.dp),
+                            )
+                        }
+                    } else {
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .focusHighlight(makeFocusable = true)
+                                .clickable { onVote(choice) }
+                                .padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(Icons.Filled.ArrowDropDown, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Text(opt, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(start = 6.dp))
+                        }
+                    }
+                }
+                Text(
+                    if (state.ended) stringResource(R.string.poll_closed)
+                    else stringResource(R.string.poll_votes, state.totalVotes),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp),
+                )
+            }
+            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                if (isAuthor && !state.ended) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.poll_end)) },
+                        onClick = { menuOpen = false; confirmEnd = true },
+                    )
+                }
+                if (canPin) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(if (isPinned) R.string.pin_action_unpin else R.string.pin_action_pin)) },
+                        onClick = { menuOpen = false; if (isPinned) onUnpin() else onPin() },
+                    )
+                }
+            }
+        }
+    }
+    if (confirmEnd) {
+        ConfirmDialog(
+            text = stringResource(R.string.poll_end_confirm),
+            confirmLabel = stringResource(R.string.poll_end),
+            onConfirm = { confirmEnd = false; onEndPoll() },
+            onDismiss = { confirmEnd = false },
+            destructive = true,
+        )
+    }
+}
+
+/** Final results of a closed poll, at its close position, with a jump-to-poll arrow. */
+@Composable
+private fun PollSummaryRow(
+    state: com.sh7411usa.shliachtzibbur.core.util.PollState,
+    onJumpToPoll: () -> Unit,
+) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+    ) {
+        IconButton(
+            onClick = onJumpToPoll,
+            modifier = Modifier.focusHighlight(makeFocusable = true),
+        ) {
+            Icon(Icons.Filled.KeyboardArrowUp, contentDescription = stringResource(R.string.poll_jump_to_poll))
+        }
+        Column(
+            Modifier
+                .weight(1f)
+                .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(12.dp))
+                .padding(12.dp),
+        ) {
+            Text(stringResource(R.string.poll_results_title), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+            Text(state.question, style = MaterialTheme.typography.titleSmall)
+            Spacer(Modifier.height(4.dp))
+            state.options.forEachIndexed { i, opt ->
+                val count = state.counts.getOrElse(i) { 0 }
+                Column(Modifier.padding(vertical = 2.dp)) {
+                    Row {
+                        Text(opt, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                        Text(count.toString(), style = MaterialTheme.typography.labelSmall)
+                    }
+                    androidx.compose.material3.LinearProgressIndicator(
+                        progress = { if (state.totalVotes > 0) count.toFloat() / state.totalVotes else 0f },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 2.dp),
+                    )
+                }
+            }
+            Text(
+                stringResource(R.string.poll_total_votes, state.totalVotes),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+        }
+    }
+}
+
+/** Compose a new poll: a question and 2+ options. */
+@Composable
+private fun PollComposerDialog(
+    lengthOf: (String, List<String>) -> Int,
+    hardLimit: Int,
+    onCreate: (String, List<String>) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var question by rememberSaveable { mutableStateOf("") }
+    var options by rememberSaveable { mutableStateOf(listOf("", "")) }
+    val cleaned = options.map { it.trim() }.filter { it.isNotEmpty() }
+    val projected = if (question.isNotBlank() && cleaned.size >= 2) lengthOf(question, cleaned) else 0
+    val overLimit = projected > hardLimit
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.poll_new_title)) },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                OutlinedTextField(
+                    value = question,
+                    onValueChange = { question = it },
+                    label = { Text(stringResource(R.string.poll_question)) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                options.forEachIndexed { i, opt ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        OutlinedTextField(
+                            value = opt,
+                            onValueChange = { v -> options = options.toMutableList().also { it[i] = v } },
+                            label = { Text(stringResource(R.string.poll_option, i + 1)) },
+                            singleLine = true,
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(top = 8.dp),
+                        )
+                        if (options.size > 2) {
+                            IconButton(onClick = { options = options.toMutableList().also { it.removeAt(i) } }) {
+                                Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.action_delete))
+                            }
+                        }
+                    }
+                }
+                TextButton(onClick = { options = options + "" }) {
+                    Text(stringResource(R.string.poll_add_option))
+                }
+                if (projected > 0) {
+                    Text(
+                        stringResource(R.string.messages_char_count, projected, hardLimit),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (overLimit) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onCreate(question.trim(), cleaned) },
+                enabled = question.isNotBlank() && cleaned.size >= 2 && !overLimit,
+            ) { Text(stringResource(R.string.poll_create)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+        },
+    )
 }
 
 /** Full-screen gate shown when an encrypted group can't be read with the known keys. */
@@ -473,71 +940,6 @@ private fun KeyPromptDialog(
     )
 }
 
-/** One emoji reaction shown on the message it targets. */
-private data class Reaction(
-    val emoji: String,
-    /** The reactor's display name; null while the send is still pending. */
-    val reactor: String?,
-    /** The reactor's user id, used to keep only their most recent reaction. */
-    val reactorId: String?,
-    /** Reaction-message seq; [Long.MAX_VALUE] while pending. */
-    val seq: Long,
-    val pending: Boolean,
-)
-
-private data class SplitConversation(
-    val items: List<ConversationItem>,
-    val reactions: Map<Long, List<Reaction>>,
-)
-
-/**
- * Splits [raw] into the rows that get their own bubble and a `targetSeq -> reactions`
- * map. Since messages can't be un-sent, only each person's most recent reaction to
- * a given message is kept.
- */
-private fun splitReactions(raw: List<ConversationItem>): SplitConversation {
-    val visible = ArrayList<ConversationItem>(raw.size)
-    val byTarget = LinkedHashMap<Long, MutableList<Reaction>>()
-
-    fun add(target: Long, reaction: Reaction) {
-        byTarget.getOrPut(target) { mutableListOf() }.add(reaction)
-    }
-
-    for (item in raw) {
-        when (item) {
-            is ConversationItem.Delivered -> {
-                val target = Reactions.targetOf(item.displayText)
-                val emoji = Reactions.of(item.displayText)
-                if (target != null && emoji != null) {
-                    add(
-                        target,
-                        Reaction(emoji, item.message.displayName, item.message.senderId, item.message.seq, pending = false),
-                    )
-                } else {
-                    visible.add(item)
-                }
-            }
-
-            is ConversationItem.Pending -> {
-                val target = Reactions.targetOf(item.outbox.text)
-                val emoji = Reactions.of(item.outbox.text)
-                if (target != null && emoji != null) {
-                    add(target, Reaction(emoji, null, null, Long.MAX_VALUE, pending = true))
-                } else {
-                    visible.add(item)
-                }
-            }
-        }
-    }
-
-    val collapsed = byTarget.mapValues { (_, list) ->
-        list.groupBy { it.reactorId ?: "pending:${it.emoji}" }
-            .map { (_, perPerson) -> perPerson.maxByOrNull { it.seq }!! }
-            .sortedBy { it.seq }
-    }
-    return SplitConversation(visible, collapsed)
-}
-
 /** Name + best phone number for a contact chosen via `ACTION_PICK`, as plain text. */
 private fun readContactSnippet(context: Context, contactUri: Uri): String? = runCatching {
     val resolver = context.contentResolver
@@ -583,12 +985,16 @@ private fun MessageBubble(
     markdown: Boolean,
     showSeq: Boolean,
     canReply: Boolean,
+    canPin: Boolean,
+    isPinned: Boolean,
     security: MessageSecurity,
     original: String?,
     reactions: List<Reaction>,
     onReply: () -> Unit,
     onReact: (String) -> Unit,
     onRequestKey: () -> Unit,
+    onPin: () -> Unit,
+    onUnpin: () -> Unit,
 ) {
     val clipboard = LocalClipboardManager.current
     val isTouch = rememberIsTouchDevice()
@@ -695,6 +1101,15 @@ private fun MessageBubble(
                         onClick = {
                             menuOpen = false
                             showOriginal = true
+                        },
+                    )
+                }
+                if (canPin) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(if (isPinned) R.string.pin_action_unpin else R.string.pin_action_pin)) },
+                        onClick = {
+                            menuOpen = false
+                            if (isPinned) onUnpin() else onPin()
                         },
                     )
                 }
@@ -1045,33 +1460,34 @@ private fun MessageInputBar(
     enabled: Boolean,
     blockedReason: String?,
     sending: Boolean,
-    maxLength: Int,
+    hardLimit: Int,
     encrypted: Boolean,
+    projectedLength: (String) -> Int,
     replyingTo: QuotedRef?,
     onCancelReply: () -> Unit,
     onSend: (String) -> Unit,
+    onCreatePoll: () -> Unit,
 ) {
     var text by remember { mutableStateOf("") }
     var attachOpen by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
-    // A reply still costs its hidden `RE:<seq> ` marker against the length limit.
-    val tokenOverhead = replyingTo?.let { ReplyToken.format(it.seq, "").length } ?: 0
-    val bodyMax = (maxLength - tokenOverhead).coerceAtLeast(0)
-    val used = text.length + tokenOverhead
-    LaunchedEffect(bodyMax) {
-        if (text.length > bodyMax) text = text.take(bodyMax)
-    }
+    fun fullPlaintext(body: String): String =
+        replyingTo?.let { ReplyToken.format(it.seq, body) } ?: body
+
+    // The composer shows the *wire* length (after the reply marker and, in an
+    // encrypted group, encryption) against the server's 1000-char limit.
+    val used = projectedLength(fullPlaintext(text.trim()))
+    val overLimit = used > hardLimit
 
     fun append(snippet: String) {
-        val joined = (if (text.isBlank()) "" else text.trimEnd() + "\n") + snippet
-        text = joined.take(bodyMax)
+        text = (if (text.isBlank()) "" else text.trimEnd() + "\n") + snippet
     }
 
     fun sendNow() {
         val body = text.trim()
-        if (body.isNotEmpty() && enabled && !sending) {
-            onSend(replyingTo?.let { ReplyToken.format(it.seq, body) } ?: body)
+        if (body.isNotEmpty() && enabled && !sending && !overLimit) {
+            onSend(fullPlaintext(body))
             text = ""
             onCancelReply()
         }
@@ -1148,9 +1564,9 @@ private fun MessageInputBar(
             }
             if (text.isNotEmpty()) {
                 Text(
-                    stringResource(R.string.messages_char_count, used, maxLength),
+                    stringResource(R.string.messages_char_count, used, hardLimit),
                     style = MaterialTheme.typography.labelSmall,
-                    color = if (used >= maxLength) {
+                    color = if (overLimit) {
                         MaterialTheme.colorScheme.error
                     } else {
                         MaterialTheme.colorScheme.onSurfaceVariant
@@ -1191,6 +1607,13 @@ private fun MessageInputBar(
                                 attachLocation()
                             },
                         )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.poll_new_title)) },
+                            onClick = {
+                                attachOpen = false
+                                onCreatePoll()
+                            },
+                        )
                     }
                 }
                 if (encrypted) {
@@ -1205,7 +1628,8 @@ private fun MessageInputBar(
                 }
                 TextField(
                     value = text,
-                    onValueChange = { if (it.length <= bodyMax) text = it },
+                    onValueChange = { text = it },
+                    isError = overLimit,
                     placeholder = { Text(stringResource(R.string.messages_input_hint)) },
                     modifier = Modifier.weight(1f),
                     maxLines = 4,
@@ -1223,7 +1647,7 @@ private fun MessageInputBar(
                 )
                 IconButton(
                     onClick = { sendNow() },
-                    enabled = enabled && !sending && text.isNotBlank(),
+                    enabled = enabled && !sending && text.isNotBlank() && !overLimit,
                     modifier = Modifier.focusHighlight(makeFocusable = true),
                 ) {
                     Icon(

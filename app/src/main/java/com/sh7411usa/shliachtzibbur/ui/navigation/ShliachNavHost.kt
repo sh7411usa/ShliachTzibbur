@@ -124,6 +124,9 @@ private fun NavGraphBuilder.mainGraph(navController: NavHostController) {
                 onCreateGroup = { navController.navigate(Routes.createGroup()) },
                 onOpenContacts = { navController.navigate(Routes.CONTACTS) },
                 onOpenSettings = { navController.navigate(Routes.SETTINGS_HOME) },
+                onOpenGroupSettings = { id -> navController.navigate(Routes.groupSettings(id)) },
+                onOpenMembers = { id -> navController.navigate(Routes.members(id)) },
+                onManageEncryption = { id -> navController.navigate(Routes.groupEncryption(id)) },
             )
         }
         composable(Routes.CONTACTS) {
