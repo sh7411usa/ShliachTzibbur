@@ -197,6 +197,8 @@
     <string name="enc_create_label">Cifrar este grupo</string>
     <string name="enc_key_share_label">Enviar la clave de cifrado por SMS a los nuevos miembros en Tzibbur</string>
     <string name="enc_key_sms">Te han añadido al grupo cifrado \"%1$s\" en Shliach Tzibbur. Abre la app, ve a ese grupo → Cifrado → Añadir una clave, y pega esto:\n%2$s</string>
+    <string name="enc_key_sms_fallback">No hay app de mensajes; se copió la clave de cifrado.</string>
+    <string name="enc_key_copied">Clave copiada</string>
 
     <string name="group_settings_title">Ajustes del grupo</string>
     <string name="group_settings_name">Nombre</string>

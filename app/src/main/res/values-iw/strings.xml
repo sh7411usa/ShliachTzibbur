@@ -197,6 +197,8 @@
     <string name="enc_create_label">הצפן את הקבוצה הזו</string>
     <string name="enc_key_share_label">שלח את מפתח ההצפנה ב־SMS לחברים החדשים ב־Tzibbur</string>
     <string name="enc_key_sms">נוספת לקבוצה המוצפנת \"%1$s\" ב־Shliach Tzibbur. פתח את האפליקציה, עבור לקבוצה ← הצפנה ← הוספת מפתח, והדבק את זה:\n%2$s</string>
+    <string name="enc_key_sms_fallback">אין אפליקציית הודעות; מפתח ההצפנה הועתק במקום.</string>
+    <string name="enc_key_copied">המפתח הועתק</string>
 
     <string name="group_settings_title">הגדרות הקבוצה</string>
     <string name="group_settings_name">שם</string>

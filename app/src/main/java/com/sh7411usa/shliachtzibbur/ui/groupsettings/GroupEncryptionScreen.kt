@@ -45,6 +45,7 @@ import com.sh7411usa.shliachtzibbur.ui.common.ConfirmDialog
 import com.sh7411usa.shliachtzibbur.ui.common.PrimaryButton
 import com.sh7411usa.shliachtzibbur.ui.common.SectionHeader
 import com.sh7411usa.shliachtzibbur.ui.common.ThinDivider
+import com.sh7411usa.shliachtzibbur.ui.common.focusHighlight
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -228,6 +229,9 @@ private fun KeyRow(
     onUse: () -> Unit,
     onDelete: () -> Unit,
 ) {
+    val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val copied = stringResource(R.string.enc_key_copied)
     Row(
         Modifier
             .fillMaxWidth()
@@ -235,15 +239,25 @@ private fun KeyRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
-            Text(
-                key.hex.take(8) + "…" + key.hex.takeLast(4),
-                style = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
+            AssistChip(
+                onClick = {
+                    clipboard.setText(androidx.compose.ui.text.AnnotatedString(key.hex))
+                    android.widget.Toast.makeText(context, copied, android.widget.Toast.LENGTH_SHORT).show()
+                },
+                label = {
+                    Text(
+                        key.hex.take(8) + "…" + key.hex.takeLast(4),
+                        style = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
+                    )
+                },
+                modifier = Modifier.focusHighlight(makeFocusable = true),
             )
             if (isActive) {
-                AssistChip(
-                    onClick = {},
-                    enabled = false,
-                    label = { Text(stringResource(R.string.enc_key_current)) },
+                Text(
+                    stringResource(R.string.enc_key_current),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(top = 2.dp),
                 )
             }
         }

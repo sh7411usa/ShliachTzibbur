@@ -137,15 +137,20 @@ class AddMembersViewModel(
         _state.update { it.copy(typed = it.typed - number) }
 
     fun submit() {
-        val phones = _state.value.selected.toList() + _state.value.typed
+        val phones = (_state.value.selected.toList() + _state.value.typed).distinct()
         if (phones.isEmpty()) return
         _state.update { it.copy(working = true, error = null) }
         viewModelScope.launch {
             when (val result = memberRepository.add(groupId, phones, region)) {
                 is ApiResult.Success -> _state.update { s ->
+                    // The member list rarely echoes phone numbers, so derive the
+                    // key-share targets from what we sent: every number that
+                    // didn't come back "not found" now has a membership.
+                    val notFound = result.value.notFound.toSet()
+                    val nameByPhone = s.contacts.associate { it.e164 to it.name }
                     val targets = if (s.encrypted && s.shareKey && s.keyHex != null) {
-                        result.value.added
-                            .mapNotNull { m -> m.phoneE164?.let { KeyShareTarget(m.displayName, it) } }
+                        phones.filter { it !in notFound }
+                            .map { KeyShareTarget(nameByPhone[it] ?: it, it) }
                     } else {
                         emptyList()
                     }

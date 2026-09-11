@@ -20,6 +20,19 @@
     <!-- "attach location" — coarse is enough. -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
+    <!-- Package visibility (Android 11+): the SMS app for invites / sharing an
+         encryption key, and a browser for links opened from messages. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.SENDTO" />
+            <data android:scheme="smsto" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
+    </queries>
+
     <!-- The app is fully usable without a touchscreen (D-pad / TV / feature phone). -->
     <uses-feature
         android:name="android.hardware.touchscreen"

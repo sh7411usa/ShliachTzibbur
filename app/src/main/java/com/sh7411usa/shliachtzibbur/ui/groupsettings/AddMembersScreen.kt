@@ -69,28 +69,32 @@ fun AddMembersScreen(
         ActivityResultContracts.RequestPermission(),
     ) { granted -> viewModel.onPermissionResult(granted) }
 
-    val keySmsBody = if (state.keyHex != null) {
-        stringResource(R.string.enc_key_sms, state.groupName, state.keyHex!!)
-    } else {
-        ""
-    }
+    val keySmsBody = state.keyHex?.let { stringResource(R.string.enc_key_sms, state.groupName, it) }.orEmpty()
+    val keyCopiedNote = stringResource(R.string.enc_key_sms_fallback)
     LaunchedEffect(state.result) {
-        if (state.result != null) {
-            val targets = state.keyShareTargets
-            if (targets.isNotEmpty()) {
+        if (state.result == null) return@LaunchedEffect
+        val targets = state.keyShareTargets
+        val hex = state.keyHex
+        if (targets.isNotEmpty() && hex != null) {
+            val opened = runCatching {
+                val to = targets.joinToString(";") { it.e164.filter { c -> c.isDigit() || c == '+' } }
+                context.startActivity(
+                    android.content.Intent(
+                        android.content.Intent.ACTION_SENDTO,
+                        android.net.Uri.parse("smsto:$to"),
+                    ).putExtra("sms_body", keySmsBody),
+                )
+            }.isSuccess
+            if (!opened) {
                 runCatching {
-                    val to = targets.joinToString(",") { it.e164 }
-                    context.startActivity(
-                        android.content.Intent(
-                            android.content.Intent.ACTION_SENDTO,
-                            android.net.Uri.parse("smsto:$to"),
-                        ).putExtra("sms_body", keySmsBody),
-                    )
+                    val cm = context.getSystemService(android.content.ClipboardManager::class.java)
+                    cm?.setPrimaryClip(android.content.ClipData.newPlainText("encryption key", hex))
                 }
-                viewModel.clearKeyShareTargets()
+                android.widget.Toast.makeText(context, keyCopiedNote, android.widget.Toast.LENGTH_LONG).show()
             }
-            onDone()
+            viewModel.clearKeyShareTargets()
         }
+        onDone()
     }
 
     fun commitManual() {

@@ -197,6 +197,8 @@
     <string name="enc_create_label">تشفير هذه المجموعة</string>
     <string name="enc_key_share_label">إرسال مفتاح التشفير برسالة نصية إلى الأعضاء الجدد على Tzibbur</string>
     <string name="enc_key_sms">تمت إضافتك إلى المجموعة المشفّرة \"%1$s\" على Shliach Tzibbur. افتح التطبيق، وانتقل إلى تلك المجموعة ← التشفير ← إضافة مفتاح، والصق هذا:\n%2$s</string>
+    <string name="enc_key_sms_fallback">لا يوجد تطبيق مراسلة؛ تم نسخ مفتاح التشفير بدلاً من ذلك.</string>
+    <string name="enc_key_copied">تم نسخ المفتاح</string>
 
     <string name="group_settings_title">إعدادات المجموعة</string>
     <string name="group_settings_name">الاسم</string>

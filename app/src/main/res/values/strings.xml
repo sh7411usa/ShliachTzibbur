@@ -185,6 +185,8 @@
     <string name="enc_create_label">Encrypt this group</string>
     <string name="enc_key_share_label">Text the encryption key to new members on Tzibbur</string>
     <string name="enc_key_sms">You\'ve been added to the encrypted group \"%1$s\" on Shliach Tzibbur. Open the app, go to that group → Encryption → Add key, and paste this:\n%2$s</string>
+    <string name="enc_key_sms_fallback">No messaging app — the encryption key was copied instead.</string>
+    <string name="enc_key_copied">Key copied</string>
 
     <!-- Group settings -->
     <string name="group_settings_title">Group settings</string>

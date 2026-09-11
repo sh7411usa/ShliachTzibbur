@@ -6,6 +6,20 @@ stays in sync with `app/build.gradle.kts`.
 
 ---
 
+## 0.14 — versionCode 15 — 2026-09-10
+
+Key hand-off fixes.
+
+- **Key-share SMS**: the "text the key to new members" targets are now derived
+  from the numbers actually added (the member list rarely echoes phone numbers,
+  so the previous approach produced an empty list and sent nothing). Recipients
+  are `;`-joined and stripped to digits/`+`. If no messaging app handles the
+  intent, the key is copied to the clipboard with a toast instead.
+- Added a `<queries>` block (SMS `smsto:` + `https` VIEW) for Android 11+
+  package visibility. `ACTION_SENDTO` needs no SMS permission.
+- **Encryption screen**: each key is now a tappable chip showing the masked hex;
+  tapping it copies the full key to the clipboard.
+
 ## 0.13 — versionCode 14 — 2026-09-10
 
 Encryption trust + key hand-off.
