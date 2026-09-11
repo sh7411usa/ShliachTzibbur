@@ -75,7 +75,7 @@ class GroupEncryptionViewModel(
     }
 
     fun addKey(hex: String) {
-        val clean = hex.trim()
+        val clean = KeyHex.clean(hex)
         if (!KeyHex.isValid(clean)) {
             _keyError.update { true }
             return

@@ -20,7 +20,19 @@ object KeyHex {
 
     private val PATTERN = Regex("^[0-9a-fA-F]{64}$")
 
+    /** A standalone 64-hex run (not part of a longer hex string). */
+    private val EMBEDDED = Regex("(?<![0-9a-fA-F])[0-9a-fA-F]{64}(?![0-9a-fA-F])")
+
     fun isValid(value: String): Boolean = PATTERN.matches(value.trim())
+
+    /**
+     * Pulls the key out of a larger blob — e.g. the whole key-hand-off SMS pasted
+     * into the field — returning the first standalone 64-hex run, else null.
+     */
+    fun extract(text: String): String? = EMBEDDED.find(text)?.value?.lowercase()
+
+    /** [text] reduced to just the key if one is embedded in it, otherwise trimmed as-is. */
+    fun clean(text: String): String = extract(text) ?: text.trim()
 
     /** Normalises to lowercase, no surrounding whitespace. Caller must check [isValid] first. */
     fun normalize(value: String): String = value.trim().lowercase()

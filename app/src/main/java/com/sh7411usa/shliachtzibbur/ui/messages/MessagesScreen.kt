@@ -89,6 +89,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sh7411usa.shliachtzibbur.R
+import com.sh7411usa.shliachtzibbur.core.crypto.KeyHex
 import com.sh7411usa.shliachtzibbur.core.model.ConversationItem
 import com.sh7411usa.shliachtzibbur.core.model.GroupKind
 import com.sh7411usa.shliachtzibbur.core.model.MessageSecurity
@@ -878,7 +879,7 @@ private fun EncryptionLockPanel(
         )
         OutlinedTextField(
             value = hex,
-            onValueChange = { hex = it.trim(); if (rejected) onClearRejected() },
+            onValueChange = { hex = KeyHex.clean(it); if (rejected) onClearRejected() },
             singleLine = true,
             isError = rejected,
             placeholder = { Text(stringResource(R.string.enc_lock_hint)) },
@@ -916,7 +917,7 @@ private fun KeyPromptDialog(
         text = {
             OutlinedTextField(
                 value = hex,
-                onValueChange = { hex = it.trim() },
+                onValueChange = { hex = KeyHex.clean(it) },
                 singleLine = true,
                 isError = rejected,
                 placeholder = { Text(stringResource(R.string.enc_lock_hint)) },

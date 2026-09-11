@@ -37,6 +37,31 @@ class KeyHexTest {
         val hex = KeyHex.generate()
         assertEquals(32, KeyHex.toBytes(hex).size)
     }
+
+    @Test
+    fun `extracts a key pasted inside the whole hand-off message`() {
+        val hex = KeyHex.generate()
+        val message = "You've been added to the encrypted group \"Family\" on Shliach Tzibbur. " +
+            "Open the app, go to that group -> Encryption -> Add key, and paste this:\n$hex"
+        assertEquals(hex, KeyHex.extract(message))
+        assertEquals(hex, KeyHex.clean(message))
+    }
+
+    @Test
+    fun `clean leaves a bare key untouched (case-insensitively) and rejects junk`() {
+        val hex = KeyHex.generate()
+        assertEquals(hex, KeyHex.clean("  $hex  "))
+        assertEquals(hex, KeyHex.clean(hex.uppercase()))
+        assertNull(KeyHex.extract("not a key at all"))
+        assertEquals("not a key at all", KeyHex.clean("not a key at all"))
+    }
+
+    @Test
+    fun `does not match a hex run longer or shorter than 64`() {
+        val hex = KeyHex.generate()
+        assertNull(KeyHex.extract(hex.dropLast(1)))
+        assertNull(KeyHex.extract(hex + "a"))
+    }
 }
 
 class AesGcmSchemeTest {

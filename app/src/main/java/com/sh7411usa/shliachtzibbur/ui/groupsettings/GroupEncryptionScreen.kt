@@ -40,6 +40,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sh7411usa.shliachtzibbur.R
 import com.sh7411usa.shliachtzibbur.core.crypto.GroupKey
+import com.sh7411usa.shliachtzibbur.core.crypto.KeyHex
 import com.sh7411usa.shliachtzibbur.ui.AppViewModelFactory
 import com.sh7411usa.shliachtzibbur.ui.common.ConfirmDialog
 import com.sh7411usa.shliachtzibbur.ui.common.PrimaryButton
@@ -146,7 +147,7 @@ fun GroupEncryptionScreen(
             SectionHeader(stringResource(R.string.enc_add_key_label))
             OutlinedTextField(
                 value = keyDraft,
-                onValueChange = { keyDraft = it.trim(); if (keyError) viewModel.clearKeyError() },
+                onValueChange = { keyDraft = KeyHex.clean(it); if (keyError) viewModel.clearKeyError() },
                 singleLine = true,
                 isError = keyError,
                 placeholder = { Text(stringResource(R.string.enc_add_key_hint)) },

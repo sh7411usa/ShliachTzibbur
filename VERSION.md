@@ -6,6 +6,14 @@ stays in sync with `app/build.gradle.kts`.
 
 ---
 
+## 0.15 — versionCode 16 — 2026-09-10
+
+- **Paste the whole key-hand-off message**: every encryption-key field (Add key
+  on the Encryption screen, the lock-screen unlock field, the paste-a-key
+  dialog) now accepts the full SMS the key was texted in — it strips
+  everything except the standalone 64-hex-char key as you paste it. New
+  `KeyHex.extract` / `KeyHex.clean`.
+
 ## 0.14 — versionCode 15 — 2026-09-10
 
 Key hand-off fixes.

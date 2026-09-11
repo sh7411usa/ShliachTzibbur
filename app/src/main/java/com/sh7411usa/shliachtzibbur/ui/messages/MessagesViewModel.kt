@@ -167,7 +167,7 @@ class MessagesViewModel(
      * kept (it may unlock older messages) and [MessagesUiState.keyRejected] is set.
      */
     fun submitKey(hex: String) {
-        val clean = hex.trim()
+        val clean = KeyHex.clean(hex)
         if (!KeyHex.isValid(clean)) {
             _state.update { it.copy(keyRejected = true) }
             return
